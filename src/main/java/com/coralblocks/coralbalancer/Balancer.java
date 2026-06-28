@@ -33,7 +33,7 @@ import com.coralblocks.coralpool.ObjectPool;
  *
  * <p>A {@code Balancer} represents one local node. In a deterministic message
  * stream, all nodes should build the same active node list and then call
- * {@code isForMe(key)} to decide whether the local node should handle the key or not.
+ * {@code isForMe(key)} to decide whether the local node should handle the key or not.</p>
  */
 public class Balancer {
 
@@ -167,7 +167,7 @@ public class Balancer {
 	/**
 	 * Adds a node account to the active node list.
 	 *
-	 * <p>Owner caches are cleared when a node is added.
+	 * <p>Owner caches are cleared when a node is added.</p>
 	 *
 	 * @param nodeAccount the node account to add
 	 * @return {@code true} if the node was added; {@code false} if it was already present
@@ -184,7 +184,7 @@ public class Balancer {
 	/**
 	 * Removes a node account from the active node list.
 	 *
-	 * <p>Owner caches are cleared when a node is removed.
+	 * <p>Owner caches are cleared when a node is removed.</p>
 	 *
 	 * @param nodeAccount the node account to remove
 	 * @return {@code true} if the node was removed; {@code false} if it was not present
