@@ -65,6 +65,15 @@ final class RendezvousHashing {
         return hrwHashing(keyHash, activeNodes);
     }
 
+    public static CharSequence ownerFor(char[] key, List<CharSequence> activeNodes) {
+
+        validateArguments(key, activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
     public static CharSequence ownerFor(ByteBuffer key, List<CharSequence> activeNodes) {
 
     	validateArguments(key, activeNodes);
@@ -74,7 +83,70 @@ final class RendezvousHashing {
         return hrwHashing(keyHash, activeNodes);
     }
 
+    public static CharSequence ownerFor(boolean key, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(byte key, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(char key, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(short key, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(int key, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
     public static CharSequence ownerFor(long key, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(float key, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(double key, List<CharSequence> activeNodes) {
 
         validateActiveNodes(activeNodes);
 
@@ -136,6 +208,23 @@ final class RendezvousHashing {
         return mix64(h);
     }
 
+    private static long hash64(char[] value) {
+
+        long h = FNV64_OFFSET;
+
+        for (int i = 0; i < value.length; i++) {
+            char c = value[i];
+
+            h ^= c & 0xff;
+            h *= FNV64_PRIME;
+
+            h ^= (c >>> 8) & 0xff;
+            h *= FNV64_PRIME;
+        }
+
+        return mix64(h);
+    }
+
     private static long hash64(ByteBuffer value) {
 
         long h = FNV64_OFFSET;
@@ -148,8 +237,36 @@ final class RendezvousHashing {
         return mix64(h);
     }
 
+    private static long hash64(boolean value) {
+        return hash64(value ? 1L : 0L);
+    }
+
+    private static long hash64(byte value) {
+        return hash64((long) value);
+    }
+
+    private static long hash64(char value) {
+        return hash64((long) value);
+    }
+
+    private static long hash64(short value) {
+        return hash64((long) value);
+    }
+
+    private static long hash64(int value) {
+        return hash64((long) value);
+    }
+
     private static long hash64(long value) {
         return mix64(value);
+    }
+
+    private static long hash64(float value) {
+        return hash64(Float.floatToIntBits(value));
+    }
+
+    private static long hash64(double value) {
+        return hash64(Double.doubleToLongBits(value));
     }
 
     private static int compare(CharSequence a, CharSequence b) {

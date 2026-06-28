@@ -66,6 +66,17 @@ public class RendezvousHashingTest {
 	}
 
 	@Test
+	public void testOwnerForCharArrayKey() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
+
+		CharSequence owner = RendezvousHashing.ownerFor(new char[] { 'K', 'E', 'Y', '1' }, activeNodes);
+		CharSequence equivalentOwner = RendezvousHashing.ownerFor("KEY1", activeNodes);
+
+		Assert.assertSame(owner, equivalentOwner);
+	}
+
+	@Test
 	public void testOwnerForByteArrayKey() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
@@ -103,5 +114,51 @@ public class RendezvousHashingTest {
 
 		Assert.assertTrue(activeNodes.contains(owner));
 		Assert.assertSame(owner, RendezvousHashing.ownerFor(key, activeNodes));
+	}
+
+	@Test
+	public void testOwnerForBooleanKey() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
+
+		CharSequence trueOwner = RendezvousHashing.ownerFor(true, activeNodes);
+		CharSequence falseOwner = RendezvousHashing.ownerFor(false, activeNodes);
+
+		Assert.assertTrue(activeNodes.contains(trueOwner));
+		Assert.assertTrue(activeNodes.contains(falseOwner));
+		Assert.assertSame(trueOwner, RendezvousHashing.ownerFor(1L, activeNodes));
+		Assert.assertSame(falseOwner, RendezvousHashing.ownerFor(0L, activeNodes));
+	}
+
+	@Test
+	public void testOwnerForIntegralPrimitiveKeys() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
+
+		CharSequence byteOwner = RendezvousHashing.ownerFor((byte) 7, activeNodes);
+		CharSequence charOwner = RendezvousHashing.ownerFor('A', activeNodes);
+		CharSequence shortOwner = RendezvousHashing.ownerFor((short) 123, activeNodes);
+		CharSequence intOwner = RendezvousHashing.ownerFor(456, activeNodes);
+
+		Assert.assertSame(byteOwner, RendezvousHashing.ownerFor(7L, activeNodes));
+		Assert.assertSame(charOwner, RendezvousHashing.ownerFor(65L, activeNodes));
+		Assert.assertSame(shortOwner, RendezvousHashing.ownerFor(123L, activeNodes));
+		Assert.assertSame(intOwner, RendezvousHashing.ownerFor(456L, activeNodes));
+	}
+
+	@Test
+	public void testOwnerForFloatingPointPrimitiveKeys() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
+		float floatKey = 123.25f;
+		double doubleKey = 456.75d;
+
+		CharSequence floatOwner = RendezvousHashing.ownerFor(floatKey, activeNodes);
+		CharSequence doubleOwner = RendezvousHashing.ownerFor(doubleKey, activeNodes);
+
+		Assert.assertTrue(activeNodes.contains(floatOwner));
+		Assert.assertTrue(activeNodes.contains(doubleOwner));
+		Assert.assertSame(floatOwner, RendezvousHashing.ownerFor(floatKey, activeNodes));
+		Assert.assertSame(doubleOwner, RendezvousHashing.ownerFor(doubleKey, activeNodes));
 	}
 }
