@@ -22,6 +22,9 @@ import java.util.Map;
 
 import com.coralblocks.coralbalancer.Balancer;
 
+/**
+ * Example showing how several balancers can determine which node should handle each symbol.
+ */
 public class BalancerExample {
 
 	private static final int DEFAULT_SYMBOL_COUNT = 5000;

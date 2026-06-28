@@ -22,6 +22,9 @@ import java.util.Map;
 
 import com.coralblocks.coralbalancer.Balancer;
 
+/**
+ * Example showing how symbol pinning changes ownership for selected symbols.
+ */
 public class PinningExample {
 
 	private static final int DEFAULT_SYMBOL_COUNT = 5000;

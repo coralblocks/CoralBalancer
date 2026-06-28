@@ -28,6 +28,13 @@ import com.coralblocks.coralpool.ArrayObjectPool;
 import com.coralblocks.coralpool.ObjectBuilder;
 import com.coralblocks.coralpool.ObjectPool;
 
+/**
+ * Balances keys across node accounts using Rendezvous hashing.
+ *
+ * <p>A {@code Balancer} represents one local node. In a deterministic message
+ * stream, all nodes should build the same active node list and then call
+ * {@code isForMe(key)} to decide whether the local node should handle the key or not.
+ */
 public class Balancer {
 
 	private static final int DEFAULT_MAX_NUMBER_OF_NODES = 256;
@@ -67,22 +74,57 @@ public class Balancer {
 	private IntMap<CharSequence> floatOwnerPins = null;
 	private LongMap<CharSequence> doubleOwnerPins = null;
 	
+	/**
+	 * Creates a balancer for the given local node account.
+	 *
+	 * @param myNodeAccount the account of the local node
+	 */
 	public Balancer(CharSequence myNodeAccount) {
 		this(myNodeAccount, DEFAULT_MAX_NUMBER_OF_NODES);
 	}
 	
+	/**
+	 * Creates a balancer for the given local node account.
+	 *
+	 * @param myNodeAccount the account of the local node
+	 * @param maxNumberOfNodes the maximum number of active nodes
+	 */
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes) {
 		this(myNodeAccount, maxNumberOfNodes, DEFAULT_MAX_NODE_ACCOUNT_LENGTH);
 	}
 
+	/**
+	 * Creates a balancer for the given local node account.
+	 *
+	 * @param myNodeAccount the account of the local node
+	 * @param maxNumberOfNodes the maximum number of active nodes
+	 * @param maxNodeAccountLength the maximum expected node account length
+	 */
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength) {
 		this(myNodeAccount, maxNumberOfNodes, maxNodeAccountLength, MAX_CACHED_VARIABLE_KEY_LENGTH);
 	}
 
+	/**
+	 * Creates a balancer for the given local node account.
+	 *
+	 * @param myNodeAccount the account of the local node
+	 * @param maxNumberOfNodes the maximum number of active nodes
+	 * @param maxNodeAccountLength the maximum expected node account length
+	 * @param maxCachedVariableKeyLength the maximum variable-length key size to cache or pin
+	 */
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength, short maxCachedVariableKeyLength) {
 		this(myNodeAccount, maxNumberOfNodes, maxNodeAccountLength, maxCachedVariableKeyLength, DEFAULT_CACHE_INITIAL_CAPACITY);
 	}
 	
+	/**
+	 * Creates a balancer for the given local node account.
+	 *
+	 * @param myNodeAccount the account of the local node
+	 * @param maxNumberOfNodes the maximum number of active nodes
+	 * @param maxNodeAccountLength the maximum expected node account length
+	 * @param maxCachedVariableKeyLength the maximum variable-length key size to cache or pin
+	 * @param initialCacheCapacity the initial capacity for owner caches and pin maps
+	 */
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength, short maxCachedVariableKeyLength, int initialCacheCapacity) {
 		this.nodes = new ArrayList<CharSequence>(maxNumberOfNodes);
 		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {
@@ -104,14 +146,32 @@ public class Balancer {
 		this.charArrayView = new CharArrayView();
 	}
 
+	/**
+	 * Returns the account of the local node represented by this balancer.
+	 *
+	 * @return the local node account
+	 */
 	public String getMyNodeAccount() {
 		return myNodeAccount;
 	}
 
+	/**
+	 * Returns the number of active nodes in this balancer.
+	 *
+	 * @return the number of active nodes
+	 */
 	public int getNumberOfNodes() {
 		return nodes.size();
 	}
 
+	/**
+	 * Adds a node account to the active node list.
+	 *
+	 * <p>Owner caches are cleared when a node is added.
+	 *
+	 * @param nodeAccount the node account to add
+	 * @return {@code true} if the node was added; {@code false} if it was already present
+	 */
 	public boolean addNode(CharSequence nodeAccount) {
 		if (!contains(nodeAccount)) {
 			nodes.add(getFromPool(nodeAccount));
@@ -121,6 +181,14 @@ public class Balancer {
 		return false;
 	}
 
+	/**
+	 * Removes a node account from the active node list.
+	 *
+	 * <p>Owner caches are cleared when a node is removed.
+	 *
+	 * @param nodeAccount the node account to remove
+	 * @return {@code true} if the node was removed; {@code false} if it was not present
+	 */
 	public boolean removeNode(CharSequence nodeAccount) {
 		int index = indexOf(nodeAccount);
 		if (index >= 0) {
@@ -131,10 +199,23 @@ public class Balancer {
 		return false;
 	}
 
+	/**
+	 * Checks whether a node account is in the active node list.
+	 *
+	 * @param nodeAccount the node account to find
+	 * @return {@code true} if the node is active; {@code false} otherwise
+	 */
 	public boolean hasNode(CharSequence nodeAccount) {
 		return contains(nodeAccount);
 	}
 
+	/**
+	 * Pins a {@link CharSequence} key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} if the key was pinned; {@code false} if the key is too long to pin
+	 */
 	public boolean pin(CharSequence key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
 		if (!canPinVariableKey(key.length())) return false;
@@ -142,6 +223,13 @@ public class Balancer {
 		return true;
 	}
 
+	/**
+	 * Pins a byte array key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} if the key was pinned; {@code false} if the key is too long to pin
+	 */
 	public boolean pin(byte[] key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
 		if (!canPinVariableKey(key.length)) return false;
@@ -149,6 +237,13 @@ public class Balancer {
 		return true;
 	}
 
+	/**
+	 * Pins a char array key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} if the key was pinned; {@code false} if the key is too long to pin
+	 */
 	public boolean pin(char[] key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
 		if (!canPinVariableKey(key.length)) return false;
@@ -157,6 +252,13 @@ public class Balancer {
 		return true;
 	}
 
+	/**
+	 * Pins a {@link ByteBuffer} key to a node account.
+	 *
+	 * @param key the key to pin, using bytes from position to limit
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} if the key was pinned; {@code false} if the remaining key length is too long to pin
+	 */
 	public boolean pin(ByteBuffer key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
 		if (!canPinVariableKey(key.remaining())) return false;
@@ -164,61 +266,135 @@ public class Balancer {
 		return true;
 	}
 
+	/**
+	 * Pins a boolean key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} after the key is pinned
+	 */
 	public boolean pin(boolean key, CharSequence nodeAccount) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
 		getBooleanOwnerPins().put(cacheKey, copyNodeAccount(nodeAccount));
 		return true;
 	}
 
+	/**
+	 * Pins a byte key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} after the key is pinned
+	 */
 	public boolean pin(byte key, CharSequence nodeAccount) {
 		getByteOwnerPins().put(key, copyNodeAccount(nodeAccount));
 		return true;
 	}
 
+	/**
+	 * Pins a char key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} after the key is pinned
+	 */
 	public boolean pin(char key, CharSequence nodeAccount) {
 		getCharOwnerPins().put(key, copyNodeAccount(nodeAccount));
 		return true;
 	}
 
+	/**
+	 * Pins a short key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} after the key is pinned
+	 */
 	public boolean pin(short key, CharSequence nodeAccount) {
 		getShortOwnerPins().put(key, copyNodeAccount(nodeAccount));
 		return true;
 	}
 
+	/**
+	 * Pins an int key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} after the key is pinned
+	 */
 	public boolean pin(int key, CharSequence nodeAccount) {
 		getIntOwnerPins().put(key, copyNodeAccount(nodeAccount));
 		return true;
 	}
 
+	/**
+	 * Pins a long key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} after the key is pinned
+	 */
 	public boolean pin(long key, CharSequence nodeAccount) {
 		getLongOwnerPins().put(key, copyNodeAccount(nodeAccount));
 		return true;
 	}
 
+	/**
+	 * Pins a float key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} after the key is pinned
+	 */
 	public boolean pin(float key, CharSequence nodeAccount) {
 		int cacheKey = Float.floatToIntBits(key);
 		getFloatOwnerPins().put(cacheKey, copyNodeAccount(nodeAccount));
 		return true;
 	}
 
+	/**
+	 * Pins a double key to a node account.
+	 *
+	 * @param key the key to pin
+	 * @param nodeAccount the node account that should own the key
+	 * @return {@code true} after the key is pinned
+	 */
 	public boolean pin(double key, CharSequence nodeAccount) {
 		long cacheKey = Double.doubleToLongBits(key);
 		getDoubleOwnerPins().put(cacheKey, copyNodeAccount(nodeAccount));
 		return true;
 	}
 
+	/**
+	 * Removes a pin for a {@link CharSequence} key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(CharSequence key) {
 		ensureKeyNotNull(key);
 		if (key.length() > maxCachedVariableKeyLength) return false;
 		return charSequenceOwnerPins != null && charSequenceOwnerPins.remove(key) != null;
 	}
 
+	/**
+	 * Removes a pin for a byte array key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(byte[] key) {
 		ensureKeyNotNull(key);
 		if (key.length > maxCachedVariableKeyLength) return false;
 		return byteSequenceOwnerPins != null && byteSequenceOwnerPins.remove(key) != null;
 	}
 
+	/**
+	 * Removes a pin for a char array key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(char[] key) {
 		ensureKeyNotNull(key);
 		if (key.length > maxCachedVariableKeyLength) return false;
@@ -227,47 +403,107 @@ public class Balancer {
 		return charArrayOwnerPins.remove(charArrayView) != null;
 	}
 
+	/**
+	 * Removes a pin for a {@link ByteBuffer} key.
+	 *
+	 * @param key the key to unpin, using bytes from position to limit
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(ByteBuffer key) {
 		ensureKeyNotNull(key);
 		if (key.remaining() > maxCachedVariableKeyLength) return false;
 		return byteSequenceOwnerPins != null && byteSequenceOwnerPins.remove(key) != null;
 	}
 
+	/**
+	 * Removes a pin for a boolean key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(boolean key) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
 		return booleanOwnerPins != null && booleanOwnerPins.remove(cacheKey) != null;
 	}
 
+	/**
+	 * Removes a pin for a byte key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(byte key) {
 		return byteOwnerPins != null && byteOwnerPins.remove(key) != null;
 	}
 
+	/**
+	 * Removes a pin for a char key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(char key) {
 		return charOwnerPins != null && charOwnerPins.remove(key) != null;
 	}
 
+	/**
+	 * Removes a pin for a short key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(short key) {
 		return shortOwnerPins != null && shortOwnerPins.remove(key) != null;
 	}
 
+	/**
+	 * Removes a pin for an int key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(int key) {
 		return intOwnerPins != null && intOwnerPins.remove(key) != null;
 	}
 
+	/**
+	 * Removes a pin for a long key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(long key) {
 		return longOwnerPins != null && longOwnerPins.remove(key) != null;
 	}
 
+	/**
+	 * Removes a pin for a float key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(float key) {
 		int cacheKey = Float.floatToIntBits(key);
 		return floatOwnerPins != null && floatOwnerPins.remove(cacheKey) != null;
 	}
 
+	/**
+	 * Removes a pin for a double key.
+	 *
+	 * @param key the key to unpin
+	 * @return {@code true} if a pin was removed; {@code false} otherwise
+	 */
 	public boolean unpin(double key) {
 		long cacheKey = Double.doubleToLongBits(key);
 		return doubleOwnerPins != null && doubleOwnerPins.remove(cacheKey) != null;
 	}
 
+	/**
+	 * Returns the owner node for a {@link CharSequence} key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(CharSequence key) {
 		ensureKeyNotNull(key);
 		if (key.length() > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
@@ -284,6 +520,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a byte array key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(byte[] key) {
 		ensureKeyNotNull(key);
 		if (key.length > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
@@ -300,6 +542,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a char array key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(char[] key) {
 		ensureKeyNotNull(key);
 		if (key.length > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
@@ -318,6 +566,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a {@link ByteBuffer} key.
+	 *
+	 * @param key the key to balance, using bytes from position to limit
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(ByteBuffer key) {
 		ensureKeyNotNull(key);
 		if (key.remaining() > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
@@ -334,6 +588,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a boolean key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(boolean key) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
 		CharSequence owner = booleanOwnerPins == null ? null : booleanOwnerPins.get(cacheKey);
@@ -348,6 +608,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a byte key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(byte key) {
 		CharSequence owner = byteOwnerPins == null ? null : byteOwnerPins.get(key);
 		if (owner != null) return owner;
@@ -361,6 +627,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a char key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(char key) {
 		CharSequence owner = charOwnerPins == null ? null : charOwnerPins.get(key);
 		if (owner != null) return owner;
@@ -374,6 +646,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a short key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(short key) {
 		CharSequence owner = shortOwnerPins == null ? null : shortOwnerPins.get(key);
 		if (owner != null) return owner;
@@ -387,6 +665,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for an int key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(int key) {
 		CharSequence owner = intOwnerPins == null ? null : intOwnerPins.get(key);
 		if (owner != null) return owner;
@@ -400,6 +684,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a long key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(long key) {
 		CharSequence owner = longOwnerPins == null ? null : longOwnerPins.get(key);
 		if (owner != null) return owner;
@@ -413,6 +703,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a float key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(float key) {
 		int cacheKey = Float.floatToIntBits(key);
 		CharSequence owner = floatOwnerPins == null ? null : floatOwnerPins.get(cacheKey);
@@ -427,6 +723,12 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Returns the owner node for a double key.
+	 *
+	 * @param key the key to balance
+	 * @return the node account that owns the key
+	 */
 	public CharSequence ownerFor(double key) {
 		long cacheKey = Double.doubleToLongBits(key);
 		CharSequence owner = doubleOwnerPins == null ? null : doubleOwnerPins.get(cacheKey);
@@ -441,50 +743,122 @@ public class Balancer {
 		return owner;
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a {@link CharSequence} key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(CharSequence key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a byte array key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(byte[] key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a char array key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(char[] key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a {@link ByteBuffer} key.
+	 *
+	 * @param key the key to check, using bytes from position to limit
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(ByteBuffer key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a boolean key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(boolean key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a byte key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(byte key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a char key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(char key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a short key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(short key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns an int key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(int key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a long key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(long key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a float key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(float key) {
 		return isOwnerForMe(ownerFor(key));
 	}
 
+	/**
+	 * Checks whether this balancer's local node owns a double key.
+	 *
+	 * @param key the key to check
+	 * @return {@code true} if the local node owns the key; {@code false} otherwise
+	 */
 	public boolean isForMe(double key) {
 		return isOwnerForMe(ownerFor(key));
 	}
@@ -714,7 +1088,7 @@ public class Balancer {
 	        if (a.charAt(i) != b.charAt(i)) return false;
 	    }
 
-	    return true;
+		return true;
 	}
 
 	private static final class CharArrayView implements CharSequence {

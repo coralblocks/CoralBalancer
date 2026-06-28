@@ -18,6 +18,9 @@ package com.coralblocks.coralbalancer;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+/**
+ * Static Rendezvous hashing implementation used to choose one owner from a list of active nodes.
+ */
 final class RendezvousHashing {
 
     private static final long FNV64_OFFSET = 0xcbf29ce484222325L;
@@ -45,61 +48,145 @@ final class RendezvousHashing {
         }
     }
 
+    /**
+     * Returns the owner node for a {@link CharSequence} key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(CharSequence key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a byte array key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(byte[] key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a char array key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(char[] key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a {@link ByteBuffer} key.
+     *
+     * @param key the key to balance, using bytes from position to limit
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(ByteBuffer key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a boolean key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(boolean key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a byte key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(byte key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a char key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(char key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a short key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(short key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for an int key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(int key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a long key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(long key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a float key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(float key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
     }
 
+    /**
+     * Returns the owner node for a double key.
+     *
+     * @param key the key to balance
+     * @param activeNodes the active nodes to choose from
+     * @return the node account that owns the key
+     */
     public static CharSequence ownerFor(double key, List<CharSequence> activeNodes) {
 
         return ownerForHash(hashKey(key), activeNodes);
