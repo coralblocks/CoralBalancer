@@ -24,9 +24,6 @@ import com.coralblocks.coralpool.ObjectPool;
 
 public class Balancer {
 	
-	private static final int POOL_INITIAL_CAPACITY = 64;
-	private static final int POOL_PRELOAD_COUNT = 32;
-	
 	private final List<CharSequence> nodes;
 	private final ObjectPool<StringBuilder> sbPool;
 	
@@ -38,7 +35,10 @@ public class Balancer {
 				return new StringBuilder(maxNodeAccountLength);
 			}
 		};
-		this.sbPool = new ArrayObjectPool<StringBuilder>(POOL_INITIAL_CAPACITY, POOL_PRELOAD_COUNT, builder);
+		
+		int preloadCount = Math.max(maxNumberOfNodes / 2, 1);
+		
+		this.sbPool = new ArrayObjectPool<StringBuilder>(maxNumberOfNodes, preloadCount, builder);
 	}
 	
 	public int getNumberOfNodes() {
