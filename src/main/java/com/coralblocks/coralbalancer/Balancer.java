@@ -33,13 +33,14 @@ public class Balancer {
 	private static final int DEFAULT_MAX_NUMBER_OF_NODES = 256;
 	private static final int DEFAULT_MAX_NODE_ACCOUNT_LENGTH = 64;
 	private static final int DEFAULT_CACHE_INITIAL_CAPACITY = 1024;
-	private static final short MAX_CACHED_VARIABLE_KEY_LENGTH = 64;
+	private static final short MAX_CACHED_VARIABLE_KEY_LENGTH = 128;
 
 	private final List<CharSequence> nodes;
 	private final ObjectPool<StringBuilder> sbPool;
 	private final String myNodeAccount;
 	
 	private final int maxCachedVariableKeyLength;
+	private final CharArrayView charArrayView;
 	
 	private final CharSequenceMap<CharSequence> charSequenceOwnerCache;
 	private final CharSequenceMap<CharSequence> charArrayOwnerCache;
@@ -52,8 +53,7 @@ public class Balancer {
 	private final LongMap<CharSequence> longOwnerCache;
 	private final IntMap<CharSequence> floatOwnerCache;
 	private final LongMap<CharSequence> doubleOwnerCache;
-	private final CharArrayView charArrayView;
-
+	
 	public Balancer(CharSequence myNodeAccount) {
 		this(myNodeAccount, DEFAULT_MAX_NUMBER_OF_NODES, DEFAULT_MAX_NODE_ACCOUNT_LENGTH);
 	}
@@ -76,7 +76,9 @@ public class Balancer {
 		this.sbPool = new ArrayObjectPool<StringBuilder>(maxNumberOfNodes, preloadCount, builder);
 
 		this.myNodeAccount = myNodeAccount.toString();
+		
 		this.maxCachedVariableKeyLength = maxCachedVariableKeyLength;
+		
 		this.charSequenceOwnerCache = new CharSequenceMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
 		this.charArrayOwnerCache = new CharSequenceMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
 		this.byteSequenceOwnerCache = new ByteBufferMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
@@ -88,6 +90,7 @@ public class Balancer {
 		this.longOwnerCache = new LongMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
 		this.floatOwnerCache = new IntMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
 		this.doubleOwnerCache = new LongMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
+		
 		this.charArrayView = new CharArrayView();
 	}
 
