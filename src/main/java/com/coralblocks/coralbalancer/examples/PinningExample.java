@@ -49,21 +49,22 @@ public class PinningExample {
 			balancers.add(balancer);
 		}
 
-		Map<String, Integer> symbolsByNodeBeforePinning = new LinkedHashMap<String, Integer>();
+		Map<String, Integer> symbolsHandledBeforePinning = new LinkedHashMap<String, Integer>();
 		for (String nodeAccount : nodeAccounts) {
-			symbolsByNodeBeforePinning.put(nodeAccount, 0);
+			symbolsHandledBeforePinning.put(nodeAccount, 0);
 		}
 
-		Map<String, String> ownerBeforePinning = new LinkedHashMap<String, String>();
+		Map<String, String> firstPassOwnersBySymbol = new LinkedHashMap<String, String>();
 		
 		for (String symbol : symbols) {
 
 			int matches = 0;
+			
 			for (Balancer balancer : balancers) {
 				if (balancer.isForMe(symbol)) {
 					String nodeAccount = balancer.getMyNodeAccount();
-					ownerBeforePinning.put(symbol, nodeAccount);
-					symbolsByNodeBeforePinning.put(nodeAccount, symbolsByNodeBeforePinning.get(nodeAccount) + 1);
+					firstPassOwnersBySymbol.put(symbol, nodeAccount);
+					symbolsHandledBeforePinning.put(nodeAccount, symbolsHandledBeforePinning.get(nodeAccount) + 1);
 					matches++;
 				}
 			}
@@ -71,30 +72,22 @@ public class PinningExample {
 			if (matches != 1) throw new IllegalStateException("Something went very wrong: " + matches);
 		}
 
-		String firstPinnedSymbol = symbols.get(0);
-		String secondPinnedSymbol = symbols.get(1);
-		Map<String, String> owndersAfterPinning = new LinkedHashMap<String, String>();
+		String firstSymbol = symbols.get(0);
+		String secondSymbol = symbols.get(1);
+		String pinnedNodeAccount = nodeAccounts.get(0);
 
-		for (String symbol : new String[] { firstPinnedSymbol, secondPinnedSymbol }) {
-			String currentOwner = ownerBeforePinning.get(symbol);
-			int currentOwnerIndex = nodeAccounts.indexOf(currentOwner);
-			String pinnedOwner = nodeAccounts.get((currentOwnerIndex + 1) % nodeAccounts.size());
-
-			owndersAfterPinning.put(symbol, pinnedOwner);
-
-			for (Balancer balancer : balancers) {
-				if (!balancer.pin(symbol, pinnedOwner)) {
-					throw new IllegalStateException("Could not pin symbol: " + symbol);
-				}
-			}
+		for (Balancer balancer : balancers) {
+			balancer.pin(firstSymbol, pinnedNodeAccount);
+			balancer.pin(secondSymbol, pinnedNodeAccount);
 		}
 
-		Map<String, Integer> symbolsByNodeAfterPinning = new LinkedHashMap<String, Integer>();
+		Map<String, Integer> symbolsHandledAfterPinning = new LinkedHashMap<String, Integer>();
 		for (String nodeAccount : nodeAccounts) {
-			symbolsByNodeAfterPinning.put(nodeAccount, 0);
+			symbolsHandledAfterPinning.put(nodeAccount, 0);
 		}
 
-		Map<String, String> ownerAfterPinning = new LinkedHashMap<String, String>();
+		Map<String, String> secondPassOwnersBySymbol = new LinkedHashMap<String, String>();
+		
 		for (String symbol : symbols) {
 
 			int matches = 0;
@@ -102,8 +95,8 @@ public class PinningExample {
 			for (Balancer balancer : balancers) {
 				if (balancer.isForMe(symbol)) {
 					String nodeAccount = balancer.getMyNodeAccount();
-					ownerAfterPinning.put(symbol, nodeAccount);
-					symbolsByNodeAfterPinning.put(nodeAccount, symbolsByNodeAfterPinning.get(nodeAccount) + 1);
+					secondPassOwnersBySymbol.put(symbol, nodeAccount);
+					symbolsHandledAfterPinning.put(nodeAccount, symbolsHandledAfterPinning.get(nodeAccount) + 1);
 					matches++;
 				}
 			}
@@ -116,37 +109,34 @@ public class PinningExample {
 		System.out.println();
 		System.out.println("Before pinning:");
 
-		for (Map.Entry<String, Integer> entry : symbolsByNodeBeforePinning.entrySet()) {
+		for (Map.Entry<String, Integer> entry : symbolsHandledBeforePinning.entrySet()) {
 			long nodeSymbols = entry.getValue();
 			double percentage = nodeSymbols * 100.0 / symbolCount;
 			System.out.printf("%s handled %d symbols (%.2f%%)%n", entry.getKey(), nodeSymbols, percentage);
 		}
 
-		for (Map.Entry<String, String> entry : owndersAfterPinning.entrySet()) {
-			String symbol = entry.getKey();
-			System.out.printf("%s was handled by %s%n", symbol, ownerBeforePinning.get(symbol));
-		}
+		System.out.printf("%s was handled by %s%n", firstSymbol, firstPassOwnersBySymbol.get(firstSymbol));
+		System.out.printf("%s was handled by %s%n", secondSymbol, firstPassOwnersBySymbol.get(secondSymbol));
 
 		System.out.println();
 		System.out.println("After pinning:");
 
-		for (Map.Entry<String, Integer> entry : symbolsByNodeAfterPinning.entrySet()) {
+		for (Map.Entry<String, Integer> entry : symbolsHandledAfterPinning.entrySet()) {
 			long nodeSymbols = entry.getValue();
 			double percentage = nodeSymbols * 100.0 / symbolCount;
 			System.out.printf("%s handled %d symbols (%.2f%%)%n", entry.getKey(), nodeSymbols, percentage);
 		}
 
-		for (Map.Entry<String, String> entry : owndersAfterPinning.entrySet()) {
-			String symbol = entry.getKey();
-			String pinnedOwner = entry.getValue();
-			String newOwner = ownerAfterPinning.get(symbol);
-
-			if (!pinnedOwner.equals(newOwner)) {
-				throw new IllegalStateException(symbol + " should be pinned to " + pinnedOwner + " but went to "
-						+ newOwner);
-			}
-
-			System.out.printf("%s was handled by %s%n", symbol, newOwner);
+		if (!pinnedNodeAccount.equals(secondPassOwnersBySymbol.get(firstSymbol))) {
+			throw new IllegalStateException(firstSymbol + " should be pinned to " + pinnedNodeAccount
+					+ " but went to " + secondPassOwnersBySymbol.get(firstSymbol));
 		}
+		if (!pinnedNodeAccount.equals(secondPassOwnersBySymbol.get(secondSymbol))) {
+			throw new IllegalStateException(secondSymbol + " should be pinned to " + pinnedNodeAccount
+					+ " but went to " + secondPassOwnersBySymbol.get(secondSymbol));
+		}
+
+		System.out.printf("%s was handled by %s%n", firstSymbol, secondPassOwnersBySymbol.get(firstSymbol));
+		System.out.printf("%s was handled by %s%n", secondSymbol, secondPassOwnersBySymbol.get(secondSymbol));
 	}
 }
