@@ -27,134 +27,143 @@ final class RendezvousHashing {
     	
     }
     
-    private static void validateArguments(Object key, List<CharSequence> activeNodes) {
-    	
-    	if (key == null) {
-    		throw new IllegalArgumentException("The key argument cannot be null!");
-    	}
-
-        validateActiveNodes(activeNodes);
-    }
-
     private static void validateActiveNodes(List<CharSequence> activeNodes) {
 
-    	if (activeNodes == null) {
-    		throw new IllegalArgumentException("They activeNodes argument cannot be null!");
-    	}
-    	
-    	if (activeNodes.isEmpty()) {
-    		throw new IllegalArgumentException("The activeNodes argument cannot be empty!");
-    	}
+        if (activeNodes == null) {
+            throw new IllegalArgumentException("They activeNodes argument cannot be null!");
+        }
+
+        if (activeNodes.isEmpty()) {
+            throw new IllegalArgumentException("The activeNodes argument cannot be empty!");
+        }
+    }
+
+    private static void validateKey(Object key) {
+
+        if (key == null) {
+            throw new IllegalArgumentException("The key argument cannot be null!");
+        }
     }
 
     public static CharSequence ownerFor(CharSequence key, List<CharSequence> activeNodes) {
 
-        validateArguments(key, activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(byte[] key, List<CharSequence> activeNodes) {
 
-        validateArguments(key, activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(char[] key, List<CharSequence> activeNodes) {
 
-        validateArguments(key, activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(ByteBuffer key, List<CharSequence> activeNodes) {
 
-    	validateArguments(key, activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(boolean key, List<CharSequence> activeNodes) {
 
-        validateActiveNodes(activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(byte key, List<CharSequence> activeNodes) {
 
-        validateActiveNodes(activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(char key, List<CharSequence> activeNodes) {
 
-        validateActiveNodes(activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(short key, List<CharSequence> activeNodes) {
 
-        validateActiveNodes(activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(int key, List<CharSequence> activeNodes) {
 
-        validateActiveNodes(activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(long key, List<CharSequence> activeNodes) {
 
-        validateActiveNodes(activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(float key, List<CharSequence> activeNodes) {
 
-        validateActiveNodes(activeNodes);
-
-        long keyHash = hash64(key);
-
-        return hrwHashing(keyHash, activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
     }
 
     public static CharSequence ownerFor(double key, List<CharSequence> activeNodes) {
 
-        validateActiveNodes(activeNodes);
+        return ownerForHash(hashKey(key), activeNodes);
+    }
 
-        long keyHash = hash64(key);
+    private static CharSequence ownerForHash(long keyHash, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
 
         return hrwHashing(keyHash, activeNodes);
     }
-    
+
+    private static long hashKey(CharSequence key) {
+        validateKey(key);
+        return hash64(key);
+    }
+
+    private static long hashKey(byte[] key) {
+        validateKey(key);
+        return hash64(key);
+    }
+
+    private static long hashKey(char[] key) {
+        validateKey(key);
+        return hash64(key);
+    }
+
+    private static long hashKey(ByteBuffer key) {
+        validateKey(key);
+        return hash64(key);
+    }
+
+    private static long hashKey(boolean key) {
+        return hash64(key);
+    }
+
+    private static long hashKey(byte key) {
+        return hash64(key);
+    }
+
+    private static long hashKey(char key) {
+        return hash64(key);
+    }
+
+    private static long hashKey(short key) {
+        return hash64(key);
+    }
+
+    private static long hashKey(int key) {
+        return hash64(key);
+    }
+
+    private static long hashKey(long key) {
+        return hash64(key);
+    }
+
+    private static long hashKey(float key) {
+        return hash64(key);
+    }
+
+    private static long hashKey(double key) {
+        return hash64(key);
+    }
+
     private static CharSequence hrwHashing(long keyHash, List<CharSequence> activeNodes) {
     	
         CharSequence bestNode = activeNodes.get(0);
