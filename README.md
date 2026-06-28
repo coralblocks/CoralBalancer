@@ -1,45 +1,32 @@
 # CoralBalancer
 
-CoralBalancer balances keys across node accounts using Rendezvous hashing, also known as highest-random-weight hashing.
-
-It is meant for deterministic, single-topic sequence architectures where every node receives the same message stream. Each node builds the same balancer state, then uses `isForMe(key)` to decide whether it should handle a message.
+CoralBalancer is a deterministic, garbage-free and fast key-to-node balancing for Java. It uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) to balance any key (of any type) uniformly by choosing a node from a set of nodes. It is meant to be used by deterministic, single-topic, event-stream architectures where every node receives all messages. Each node builds the same balancer state, then uses `isForMe(key)` to decide whether it should handle a message or not.
 
 ## Example
 
 ```java
-Balancer node1 = new Balancer("NODE1");
-Balancer node2 = new Balancer("NODE2");
-Balancer node3 = new Balancer("NODE3");
+Balancer balancer = new Balancer("NODE1");
 
-node1.addNode("NODE1");
-node1.addNode("NODE2");
-node1.addNode("NODE3");
-
-node2.addNode("NODE1");
-node2.addNode("NODE2");
-node2.addNode("NODE3");
-
-node3.addNode("NODE1");
-node3.addNode("NODE2");
-node3.addNode("NODE3");
+balancer.addNode("NODE1");
+balancer.addNode("NODE2");
+balancer.addNode("NODE3");
 
 String symbol = "AAPL";
 
-if (node1.isForMe(symbol)) handle(symbol);
-if (node2.isForMe(symbol)) handle(symbol);
-if (node3.isForMe(symbol)) handle(symbol);
+if (balancer.isForMe(symbol)) handle(message);
 ```
 
-For a large number of symbols, ownership is uniformly distributed across the nodes. With three nodes, each node should handle roughly one third of the symbols.
+The keys are uniformly distributed across the nodes. With three nodes, each node should handle roughly one third of the keys.
 
 ## Features
 
+- Fast
+- Garbage-free
 - Deterministic ownership: the same key and node list always produce the same owner.
-- Uniform distribution across active nodes.
-- Garbage-free lookups after caches are warm.
+- Uniform distribution across active nodes. For example four nodes should each receive roughly 25% of the keys.
 - Per-key caching, cleared when nodes are added or removed.
-- Key support for `CharSequence`, `byte[]`, `char[]`, `ByteBuffer`, primitives, `float`, and `double`.
-- Pinning: force a specific key to a specific node and bypass Rendezvous hashing.
+- Key support for `CharSequence`, `byte[]`, `char[]`, `ByteBuffer`, and all Java primitives.
+- Pinning: force a specific key to a specific node and bypass the balancer (good for testing).
 
 ## Pinning
 
@@ -51,7 +38,7 @@ balancer.addNode("NODE3");
 
 balancer.pin("MSFT", "NODE1");
 
-if (balancer.isForMe("MSFT")) handle("MSFT");
+if (balancer.isForMe("MSFT")) handle(msg); // only if you are NODE1
 ```
 
-Pinning is useful when a symbol must be handled by a specific node while the rest of the symbols remain balanced by Rendezvous hashing.
+Pinning is useful when a symbol must be handled by a specific node while the rest of the symbols remain balanced by the balancer.
