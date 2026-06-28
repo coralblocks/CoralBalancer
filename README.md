@@ -11,9 +11,9 @@ balancer.addNode("NODE1");
 balancer.addNode("NODE2");
 balancer.addNode("NODE3");
 
-String symbol = "AAPL";
+String symbol = message.getSymbol();
 
-if (balancer.isForMe(symbol)) handle(symbol);
+if (balancer.isForMe(symbol)) handle(message); 
 ```
 
 The keys are uniformly distributed across the nodes. With three nodes, each node should handle roughly one third of the keys.
@@ -26,7 +26,7 @@ The keys are uniformly distributed across the nodes. With three nodes, each node
 - Uniform distribution across active nodes: four nodes should each receive roughly 25% of the keys.
 - Per-key caching for speed: cleared when nodes are added or removed.
 - Key support for `CharSequence`, `byte[]`, `char[]`, `ByteBuffer`, and all Java primitives.
-- Pinning: force a specific key to a specific node and bypass hashing.
+- Pinning: force a specific key to a specific node and bypass hashing (good for testing).
 
 ## Pinning
 
@@ -42,4 +42,4 @@ balancer.pin("MSFT", "NODE1");
 if (balancer.isForMe("MSFT")) handle("MSFT"); // only if you are NODE1
 ```
 
-Pinning is useful when a symbol must be handled by a specific node while the rest of the symbols remain balanced by Rendezvous Hashing.
+Pinning is useful when a symbol must be handled by a specific node while the rest of the symbols remain balanced by hashing.
