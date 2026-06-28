@@ -25,9 +25,16 @@ import com.coralblocks.coralpool.ObjectPool;
 
 public class Balancer {
 	
+	private static final int DEFAULT_MAX_NUMBER_OF_NODES = 256;
+	private static final int DEFAULT_MAX_NODE_ACCOUNT_LENGTH = 64;
+	
 	private final List<CharSequence> nodes;
 	private final ObjectPool<StringBuilder> sbPool;
 	private final String myNodeAccount;
+	
+	public Balancer(CharSequence myNodeAccount) {
+		this(myNodeAccount, DEFAULT_MAX_NUMBER_OF_NODES, DEFAULT_MAX_NODE_ACCOUNT_LENGTH);
+	}
 	
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength) {
 		this.nodes = new ArrayList<CharSequence>(maxNumberOfNodes);
