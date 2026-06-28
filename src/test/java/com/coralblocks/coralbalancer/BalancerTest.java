@@ -15,6 +15,7 @@
  */
 package com.coralblocks.coralbalancer;
 
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -248,8 +249,47 @@ public class BalancerTest {
 		Assert.assertEquals(5, byteBufferKey.limit());
 	}
 
+	@Test
+	public void testCachesAreLazyLoaded() throws Exception {
+
+		Balancer b = new Balancer("NODE1");
+
+		Assert.assertNull(getField(b, "charSequenceOwnerCache"));
+		Assert.assertNull(getField(b, "charArrayOwnerCache"));
+		Assert.assertNull(getField(b, "byteSequenceOwnerCache"));
+		Assert.assertNull(getField(b, "booleanOwnerCache"));
+		Assert.assertNull(getField(b, "byteOwnerCache"));
+		Assert.assertNull(getField(b, "charOwnerCache"));
+		Assert.assertNull(getField(b, "shortOwnerCache"));
+		Assert.assertNull(getField(b, "intOwnerCache"));
+		Assert.assertNull(getField(b, "longOwnerCache"));
+		Assert.assertNull(getField(b, "floatOwnerCache"));
+		Assert.assertNull(getField(b, "doubleOwnerCache"));
+
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+
+		Assert.assertNull(getField(b, "byteOwnerCache"));
+
+		b.ownerFor((byte) 7);
+
+		Assert.assertNotNull(getField(b, "byteOwnerCache"));
+		Assert.assertNull(getField(b, "charSequenceOwnerCache"));
+
+		b.ownerFor("KEY");
+
+		Assert.assertNotNull(getField(b, "charSequenceOwnerCache"));
+		Assert.assertNull(getField(b, "byteSequenceOwnerCache"));
+	}
+
 	private static boolean isOwnerForMe(CharSequence owner, Balancer b) {
 		return b.getMyNodeAccount().contentEquals(owner);
+	}
+
+	private static Object getField(Object target, String fieldName) throws Exception {
+		Field field = target.getClass().getDeclaredField(fieldName);
+		field.setAccessible(true);
+		return field.get(target);
 	}
 
 	private static long keyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
