@@ -26,8 +26,9 @@ public class Balancer {
 	
 	private final List<CharSequence> nodes;
 	private final ObjectPool<StringBuilder> sbPool;
+	private final String myNodeAccount;
 	
-	public Balancer(int maxNumberOfNodes, int maxNodeAccountLength) {
+	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength) {
 		this.nodes = new ArrayList<CharSequence>(maxNumberOfNodes);
 		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {
 			@Override
@@ -39,6 +40,12 @@ public class Balancer {
 		int preloadCount = Math.max(maxNumberOfNodes / 2, 1);
 		
 		this.sbPool = new ArrayObjectPool<StringBuilder>(maxNumberOfNodes, preloadCount, builder);
+		
+		this.myNodeAccount = myNodeAccount.toString();
+	}
+	
+	public String getMyNodeAccount() {
+		return myNodeAccount;
 	}
 	
 	public int getNumberOfNodes() {
