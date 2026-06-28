@@ -32,7 +32,7 @@ public class Balancer {
 
 	private static final int DEFAULT_MAX_NUMBER_OF_NODES = 256;
 	private static final int DEFAULT_MAX_NODE_ACCOUNT_LENGTH = 64;
-	private static final int DEFAULT_CACHE_INITIAL_CAPACITY = 1024;
+	private static final int DEFAULT_CACHE_INITIAL_CAPACITY = 1024 * 8;
 	private static final short MAX_CACHED_VARIABLE_KEY_LENGTH = 128;
 
 	private final List<CharSequence> nodes;
@@ -55,7 +55,11 @@ public class Balancer {
 	private final LongMap<CharSequence> doubleOwnerCache;
 	
 	public Balancer(CharSequence myNodeAccount) {
-		this(myNodeAccount, DEFAULT_MAX_NUMBER_OF_NODES, DEFAULT_MAX_NODE_ACCOUNT_LENGTH);
+		this(myNodeAccount, DEFAULT_MAX_NUMBER_OF_NODES);
+	}
+	
+	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes) {
+		this(myNodeAccount, maxNumberOfNodes, DEFAULT_MAX_NODE_ACCOUNT_LENGTH);
 	}
 
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength) {
@@ -63,6 +67,10 @@ public class Balancer {
 	}
 
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength, int maxCachedVariableKeyLength) {
+		this(myNodeAccount, maxNumberOfNodes, maxNodeAccountLength, maxCachedVariableKeyLength, DEFAULT_CACHE_INITIAL_CAPACITY);
+	}
+	
+	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength, int maxCachedVariableKeyLength, int initialCacheCapacity) {
 		this.nodes = new ArrayList<CharSequence>(maxNumberOfNodes);
 		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {
 			@Override
@@ -79,17 +87,17 @@ public class Balancer {
 		
 		this.maxCachedVariableKeyLength = maxCachedVariableKeyLength;
 		
-		this.charSequenceOwnerCache = new CharSequenceMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
-		this.charArrayOwnerCache = new CharSequenceMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
-		this.byteSequenceOwnerCache = new ByteBufferMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
+		this.charSequenceOwnerCache = new CharSequenceMap<CharSequence>(initialCacheCapacity, this.maxCachedVariableKeyLength);
+		this.charArrayOwnerCache = new CharSequenceMap<CharSequence>(initialCacheCapacity, this.maxCachedVariableKeyLength);
+		this.byteSequenceOwnerCache = new ByteBufferMap<CharSequence>(initialCacheCapacity, this.maxCachedVariableKeyLength);
 		this.booleanOwnerCache = new ByteMap<CharSequence>();
 		this.byteOwnerCache = new ByteMap<CharSequence>();
-		this.charOwnerCache = new IntMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
-		this.shortOwnerCache = new IntMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
-		this.intOwnerCache = new IntMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
-		this.longOwnerCache = new LongMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
-		this.floatOwnerCache = new IntMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
-		this.doubleOwnerCache = new LongMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
+		this.charOwnerCache = new IntMap<CharSequence>(initialCacheCapacity);
+		this.shortOwnerCache = new IntMap<CharSequence>(initialCacheCapacity);
+		this.intOwnerCache = new IntMap<CharSequence>(initialCacheCapacity);
+		this.longOwnerCache = new LongMap<CharSequence>(initialCacheCapacity);
+		this.floatOwnerCache = new IntMap<CharSequence>(initialCacheCapacity);
+		this.doubleOwnerCache = new LongMap<CharSequence>(initialCacheCapacity);
 		
 		this.charArrayView = new CharArrayView();
 	}
