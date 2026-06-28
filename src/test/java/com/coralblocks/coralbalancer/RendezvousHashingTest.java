@@ -26,14 +26,15 @@ public class RendezvousHashingTest {
 	@Test
 	public void testOwnerForReturnsActiveNode() {
 		
+		CharSequence key = new StringBuilder("KEY1");
 		CharSequence node1 = new StringBuilder("NODE1");
 		CharSequence node2 = new StringBuilder("NODE2");
 		List<CharSequence> activeNodes = Arrays.asList(node1, node2);
 		
-		CharSequence owner = RendezvousHashing.ownerFor("KEY1", activeNodes);
+		CharSequence owner = RendezvousHashing.ownerFor(key, activeNodes);
 		
 		Assert.assertTrue(owner == node1 || owner == node2);
-		Assert.assertSame(owner, RendezvousHashing.ownerFor("KEY1", activeNodes));
+		Assert.assertSame(owner, RendezvousHashing.ownerFor(key, activeNodes));
 	}
 	
 	@Test
@@ -50,5 +51,16 @@ public class RendezvousHashingTest {
 		CharSequence equivalentOwner = RendezvousHashing.ownerFor("KEY1", equivalentActiveNodes);
 		
 		Assert.assertEquals(owner.toString(), equivalentOwner.toString());
+	}
+
+	@Test
+	public void testOwnerForHashesKeyContent() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
+
+		CharSequence owner = RendezvousHashing.ownerFor(new StringBuilder("KEY1"), activeNodes);
+		CharSequence equivalentOwner = RendezvousHashing.ownerFor("KEY1", activeNodes);
+
+		Assert.assertSame(owner, equivalentOwner);
 	}
 }

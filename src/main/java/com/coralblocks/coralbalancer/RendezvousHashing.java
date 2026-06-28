@@ -26,7 +26,7 @@ final class RendezvousHashing {
     	
     }
     
-    private static void validateArguments(Object key, List<CharSequence> activeNodes) {
+    private static void validateArguments(CharSequence key, List<CharSequence> activeNodes) {
     	
     	if (key == null) {
     		throw new IllegalArgumentException("The key argument cannot be null!");
@@ -41,7 +41,7 @@ final class RendezvousHashing {
     	}
     }
 
-    public static CharSequence ownerFor(String key, List<CharSequence> activeNodes) {
+    public static CharSequence ownerFor(CharSequence key, List<CharSequence> activeNodes) {
 
     	validateArguments(key, activeNodes);
 
