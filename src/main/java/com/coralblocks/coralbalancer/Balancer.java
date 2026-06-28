@@ -18,12 +18,27 @@ package com.coralblocks.coralbalancer;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.coralblocks.coralpool.ArrayObjectPool;
+import com.coralblocks.coralpool.ObjectBuilder;
+import com.coralblocks.coralpool.ObjectPool;
+
 public class Balancer {
 	
-	private final List<String> nodes;
+	private static final int POOL_INITIAL_CAPACITY = 64;
+	private static final int POOL_PRELOAD_COUNT = 32;
 	
-	public Balancer(int maxNumberOfNodes) {
-		this.nodes = new ArrayList<String>(maxNumberOfNodes);
+	private final List<CharSequence> nodes;
+	private final ObjectPool<StringBuilder> sbPool;
+	
+	public Balancer(int maxNumberOfNodes, int maxNodeAccountLength) {
+		this.nodes = new ArrayList<CharSequence>(maxNumberOfNodes);
+		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {
+			@Override
+			public StringBuilder newInstance() {
+				return new StringBuilder(maxNodeAccountLength);
+			}
+		};
+		this.sbPool = new ArrayObjectPool<StringBuilder>(POOL_INITIAL_CAPACITY, POOL_PRELOAD_COUNT, builder);
 	}
 	
 	public int getNumberOfNodes() {
@@ -32,7 +47,7 @@ public class Balancer {
 	
 	public boolean addNode(CharSequence nodeAccount) {
 		if (!contains(nodeAccount)) {
-			nodes.add(nodeAccount.toString()); // if it is a String then toString() returns self/this
+			nodes.add(getFromPool(nodeAccount));
 			return true;
 		}
 		return false;
@@ -41,7 +56,7 @@ public class Balancer {
 	public boolean removeNode(CharSequence nodeAccount) {
 		int index = indexOf(nodeAccount);
 		if (index >= 0) {
-			nodes.remove(index);
+			sbPool.release((StringBuilder) nodes.remove(index));
 			return true;
 		}
 		return false;
@@ -49,6 +64,16 @@ public class Balancer {
 	
 	public boolean hasNode(CharSequence nodeAccount) {
 		return contains(nodeAccount);
+	}
+	
+	private CharSequence getFromPool(CharSequence cs) {
+		StringBuilder sb = sbPool.get();
+		sb.setLength(0);
+		final int len = cs.length();
+		for(int i = 0; i < len; i++) {
+			sb.append(cs.charAt(i));
+		}
+		return sb;
 	}
 	
 	private int indexOf(CharSequence nodeAccount) {
@@ -65,24 +90,16 @@ public class Balancer {
 	
 	private static boolean contentEquals(CharSequence a, CharSequence b) {
 
-	    if (a == b) {
-	        return true;
-	    }
-
-	    if (a == null || b == null) {
-	        return false;
-	    }
+	    if (a == b) return true;
+	    
+	    if (a == null || b == null) return false;
 
 	    int len = a.length();
 
-	    if (len != b.length()) {
-	        return false;
-	    }
+	    if (len != b.length()) return false;
 
 	    for (int i = 0; i < len; i++) {
-	        if (a.charAt(i) != b.charAt(i)) {
-	            return false;
-	        }
+	        if (a.charAt(i) != b.charAt(i)) return false;
 	    }
 
 	    return true;

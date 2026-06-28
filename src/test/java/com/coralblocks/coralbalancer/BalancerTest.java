@@ -24,7 +24,7 @@ public class BalancerTest {
 	@Test
 	public void testAddRemove() {
 		
-		Balancer b = new Balancer(64);
+		Balancer b = new Balancer(64, 6);
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append("NODE1");

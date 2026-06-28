@@ -21,6 +21,12 @@
 
     <dependency>
       <groupId>com.github.coralblocks</groupId>
+      <artifactId>CoralPool</artifactId>
+      <version>1.4.1</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.github.coralblocks</groupId>
       <artifactId>CoralDS</artifactId>
       <version>1.2.3</version>
     </dependency>
