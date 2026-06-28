@@ -26,7 +26,7 @@ final class RendezvousHashing {
     	
     }
     
-    private static void validateArguments(Object key, List<Integer> activeNodes) {
+    private static void validateArguments(Object key, List<CharSequence> activeNodes) {
     	
     	if (key == null) {
     		throw new IllegalArgumentException("The key argument cannot be null!");
@@ -41,45 +41,45 @@ final class RendezvousHashing {
     	}
     }
 
-    public static int ownerFor(String key, List<Integer> activeNodes) {
+    public static CharSequence ownerFor(String key, List<CharSequence> activeNodes) {
 
     	validateArguments(key, activeNodes);
 
-        long keyHash = hashKey64(key);
+        long keyHash = hash64(key);
 
         return hrwHashing(keyHash, activeNodes);
     }
     
-    private static int hrwHashing(long keyHash, List<Integer> activeNodes) {
+    private static CharSequence hrwHashing(long keyHash, List<CharSequence> activeNodes) {
     	
-        int bestNode = activeNodes.get(0);
+        CharSequence bestNode = activeNodes.get(0);
         long bestScore = score(keyHash, bestNode);
 
         for (int i = 1; i < activeNodes.size(); i++) {
 
-            int nodeId = activeNodes.get(i);
-            long score = score(keyHash, nodeId);
+            CharSequence nodeAccount = activeNodes.get(i);
+            long score = score(keyHash, nodeAccount);
 
-            if (score > bestScore || (score == bestScore && nodeId < bestNode)) {
+            if (score > bestScore || (score == bestScore && compare(nodeAccount, bestNode) < 0)) {
                 bestScore = score;
-                bestNode = nodeId;
+                bestNode = nodeAccount;
             }
         }
 
         return bestNode;
     }
 
-    private static long score(long keyHash, int nodeId) {
-        long nodeHash = mix64(nodeId);
+    private static long score(long keyHash, CharSequence nodeAccount) {
+        long nodeHash = hash64(nodeAccount);
         return mix64(keyHash ^ nodeHash);
     }
 
-    private static long hashKey64(String key) {
+    private static long hash64(CharSequence value) {
     	
         long h = FNV64_OFFSET;
 
-        for (int i = 0; i < key.length(); i++) {
-            char c = key.charAt(i);
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
 
             h ^= c & 0xff;
             h *= FNV64_PRIME;
@@ -89,6 +89,18 @@ final class RendezvousHashing {
         }
 
         return mix64(h);
+    }
+
+    private static int compare(CharSequence a, CharSequence b) {
+
+        int minLen = Math.min(a.length(), b.length());
+
+        for (int i = 0; i < minLen; i++) {
+            int diff = a.charAt(i) - b.charAt(i);
+            if (diff != 0) return diff;
+        }
+
+        return a.length() - b.length();
     }
 
     private static long mix64(long x) {
