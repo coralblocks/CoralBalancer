@@ -38,8 +38,6 @@ balancer.addNode("NODE2");
 balancer.addNode("NODE3");
 
 balancer.pin("MSFT", "NODE1");
-
-if (balancer.isForMe("MSFT")) handle("MSFT"); // only if you are NODE1
 ```
 
-Pinning is useful when a symbol must be handled by a specific node while the rest of the symbols remain balanced by hashing.
+Pinning is useful when a key must be handled by a specific node while the rest of the keys remain balanced by hashing.
