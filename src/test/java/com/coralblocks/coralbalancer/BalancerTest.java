@@ -219,6 +219,35 @@ public class BalancerTest {
 				b.isForMe(charSequenceKey));
 	}
 
+	@Test
+	public void testCustomMaxCachedVariableKeyLength() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
+		Balancer b = new Balancer("NODE2", 64, 6, (short) 3);
+
+		for (int i = 0; i < activeNodes.size(); i++) {
+			b.addNode(activeNodes.get(i));
+		}
+
+		CharSequence charSequenceKey = new StringBuilder("KEY1");
+		byte[] byteArrayKey = new byte[] { 1, 2, 3, 4 };
+		char[] charArrayKey = new char[] { 'K', 'E', 'Y', '1' };
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 1, 2, 3, 4, 9 });
+		byteBufferKey.position(1);
+		byteBufferKey.limit(5);
+
+		Assert.assertEquals(RendezvousHashing.ownerFor(charSequenceKey, activeNodes).toString(),
+				b.ownerFor(charSequenceKey).toString());
+		Assert.assertEquals(RendezvousHashing.ownerFor(byteArrayKey, activeNodes).toString(),
+				b.ownerFor(byteArrayKey).toString());
+		Assert.assertEquals(RendezvousHashing.ownerFor(charArrayKey, activeNodes).toString(),
+				b.ownerFor(charArrayKey).toString());
+		Assert.assertEquals(RendezvousHashing.ownerFor(byteBufferKey, activeNodes).toString(),
+				b.ownerFor(byteBufferKey).toString());
+		Assert.assertEquals(1, byteBufferKey.position());
+		Assert.assertEquals(5, byteBufferKey.limit());
+	}
+
 	private static boolean isOwnerForMe(CharSequence owner, Balancer b) {
 		return b.getMyNodeAccount().contentEquals(owner);
 	}

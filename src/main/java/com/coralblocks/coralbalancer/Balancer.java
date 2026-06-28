@@ -33,11 +33,14 @@ public class Balancer {
 	private static final int DEFAULT_MAX_NUMBER_OF_NODES = 256;
 	private static final int DEFAULT_MAX_NODE_ACCOUNT_LENGTH = 64;
 	private static final int DEFAULT_CACHE_INITIAL_CAPACITY = 1024;
-	private static final short CORAL_DS_MAX_KEY_LENGTH = Short.MAX_VALUE;
+	private static final short MAX_CACHED_VARIABLE_KEY_LENGTH = 64;
 
 	private final List<CharSequence> nodes;
 	private final ObjectPool<StringBuilder> sbPool;
 	private final String myNodeAccount;
+	
+	private final int maxCachedVariableKeyLength;
+	
 	private final CharSequenceMap<CharSequence> charSequenceOwnerCache;
 	private final CharSequenceMap<CharSequence> charArrayOwnerCache;
 	private final ByteBufferMap<CharSequence> byteSequenceOwnerCache;
@@ -56,6 +59,10 @@ public class Balancer {
 	}
 
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength) {
+		this(myNodeAccount, maxNumberOfNodes, maxNodeAccountLength, MAX_CACHED_VARIABLE_KEY_LENGTH);
+	}
+
+	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength, int maxCachedVariableKeyLength) {
 		this.nodes = new ArrayList<CharSequence>(maxNumberOfNodes);
 		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {
 			@Override
@@ -69,9 +76,10 @@ public class Balancer {
 		this.sbPool = new ArrayObjectPool<StringBuilder>(maxNumberOfNodes, preloadCount, builder);
 
 		this.myNodeAccount = myNodeAccount.toString();
-		this.charSequenceOwnerCache = new CharSequenceMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, CORAL_DS_MAX_KEY_LENGTH);
-		this.charArrayOwnerCache = new CharSequenceMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, CORAL_DS_MAX_KEY_LENGTH);
-		this.byteSequenceOwnerCache = new ByteBufferMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, CORAL_DS_MAX_KEY_LENGTH);
+		this.maxCachedVariableKeyLength = maxCachedVariableKeyLength;
+		this.charSequenceOwnerCache = new CharSequenceMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
+		this.charArrayOwnerCache = new CharSequenceMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
+		this.byteSequenceOwnerCache = new ByteBufferMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY, this.maxCachedVariableKeyLength);
 		this.booleanOwnerCache = new ByteMap<CharSequence>();
 		this.byteOwnerCache = new ByteMap<CharSequence>();
 		this.charOwnerCache = new IntMap<CharSequence>(DEFAULT_CACHE_INITIAL_CAPACITY);
@@ -116,7 +124,7 @@ public class Balancer {
 
 	public CharSequence ownerFor(CharSequence key) {
 		ensureKeyNotNull(key);
-		if (key.length() > CORAL_DS_MAX_KEY_LENGTH) return RendezvousHashing.ownerFor(key, nodes);
+		if (key.length() > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
 
 		CharSequence owner = charSequenceOwnerCache.get(key);
 		if (owner != null) return owner;
@@ -128,7 +136,7 @@ public class Balancer {
 
 	public CharSequence ownerFor(byte[] key) {
 		ensureKeyNotNull(key);
-		if (key.length > CORAL_DS_MAX_KEY_LENGTH) return RendezvousHashing.ownerFor(key, nodes);
+		if (key.length > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
 
 		CharSequence owner = byteSequenceOwnerCache.get(key);
 		if (owner != null) return owner;
@@ -140,7 +148,7 @@ public class Balancer {
 
 	public CharSequence ownerFor(char[] key) {
 		ensureKeyNotNull(key);
-		if (key.length > CORAL_DS_MAX_KEY_LENGTH) return RendezvousHashing.ownerFor(key, nodes);
+		if (key.length > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
 
 		charArrayView.wrap(key);
 
@@ -154,7 +162,7 @@ public class Balancer {
 
 	public CharSequence ownerFor(ByteBuffer key) {
 		ensureKeyNotNull(key);
-		if (key.remaining() > CORAL_DS_MAX_KEY_LENGTH) return RendezvousHashing.ownerFor(key, nodes);
+		if (key.remaining() > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
 
 		CharSequence owner = byteSequenceOwnerCache.get(key);
 		if (owner != null) return owner;
