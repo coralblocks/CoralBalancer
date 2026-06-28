@@ -22,7 +22,7 @@ import java.util.Map;
 
 import com.coralblocks.coralbalancer.Balancer;
 
-public class StockSymbolHandlingExample {
+public class BalancerExample {
 
 	private static final int DEFAULT_SYMBOL_COUNT = 5000;
 	private static final int DEFAULT_NODE_COUNT = 3;
