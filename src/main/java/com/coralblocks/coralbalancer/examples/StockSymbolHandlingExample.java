@@ -42,11 +42,11 @@ public class StockSymbolHandlingExample {
 			nodeAccounts.add("NODE" + i);
 		}
 
-		Map<String, Balancer> balancers = new LinkedHashMap<String, Balancer>();
+		List<Balancer> balancers = new ArrayList<Balancer>(nodeCount);
 		for (String nodeAccount : nodeAccounts) {
 			Balancer balancer = new Balancer(nodeAccount);
 			for (String na : nodeAccounts) balancer.addNode(na);
-			balancers.put(nodeAccount, balancer);
+			balancers.add(balancer);
 		}
 
 		Map<String, Integer> symbolsByNode = new LinkedHashMap<String, Integer>();
@@ -56,26 +56,22 @@ public class StockSymbolHandlingExample {
 
 		for (String symbol : symbols) {
 			
-			String nodeThatShouldHandle = null;
-
-			for (Map.Entry<String, Balancer> entry : balancers.entrySet()) {
-				if (entry.getValue().isForMe(symbol)) {
-					nodeThatShouldHandle = entry.getKey();
-					break;
+			int matches = 0;
+			
+			for (Balancer balancer : balancers) {
+				if (balancer.isForMe(symbol)) {
+					symbolsByNode.put(balancer.getMyNodeAccount(), symbolsByNode.get(balancer.getMyNodeAccount()) + 1);
+					matches++;
 				}
 			}
-
-			if (nodeThatShouldHandle == null) {
-				throw new IllegalStateException("No node should handle symbol: " + symbol);
-			}
-
-			symbolsByNode.put(nodeThatShouldHandle, symbolsByNode.get(nodeThatShouldHandle) + 1);
+			
+			if (matches != 1) throw new IllegalStateException("Something went very wrong: " + matches);
 		}
 
 		System.out.println("Symbols: " + symbolCount);
 		System.out.println("Nodes: " + nodeCount);
 		System.out.println();
-		System.out.println("Symbols handled by node:");
+		System.out.println("Symbols handled by each node:\n");
 
 		for (Map.Entry<String, Integer> entry : symbolsByNode.entrySet()) {
 			long nodeSymbols = entry.getValue();
