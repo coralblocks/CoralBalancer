@@ -15,6 +15,7 @@
  */
 package com.coralblocks.coralbalancer;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -62,5 +63,45 @@ public class RendezvousHashingTest {
 		CharSequence equivalentOwner = RendezvousHashing.ownerFor("KEY1", activeNodes);
 
 		Assert.assertSame(owner, equivalentOwner);
+	}
+
+	@Test
+	public void testOwnerForByteArrayKey() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
+		byte[] key = new byte[] { 1, 2, 3, 4 };
+
+		CharSequence owner = RendezvousHashing.ownerFor(key, activeNodes);
+
+		Assert.assertTrue(activeNodes.contains(owner));
+		Assert.assertSame(owner, RendezvousHashing.ownerFor(key, activeNodes));
+	}
+
+	@Test
+	public void testOwnerForByteBufferKey() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
+		ByteBuffer key = ByteBuffer.wrap(new byte[] { 9, 1, 2, 3, 4, 9 });
+		key.position(1);
+		key.limit(5);
+
+		CharSequence owner = RendezvousHashing.ownerFor(key, activeNodes);
+		CharSequence equivalentOwner = RendezvousHashing.ownerFor(new byte[] { 1, 2, 3, 4 }, activeNodes);
+
+		Assert.assertSame(owner, equivalentOwner);
+		Assert.assertEquals(1, key.position());
+		Assert.assertEquals(5, key.limit());
+	}
+
+	@Test
+	public void testOwnerForLongKey() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3");
+		long key = 123456789L;
+
+		CharSequence owner = RendezvousHashing.ownerFor(key, activeNodes);
+
+		Assert.assertTrue(activeNodes.contains(owner));
+		Assert.assertSame(owner, RendezvousHashing.ownerFor(key, activeNodes));
 	}
 }

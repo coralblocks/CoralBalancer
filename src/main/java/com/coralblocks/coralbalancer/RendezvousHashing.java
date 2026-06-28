@@ -15,6 +15,7 @@
  */
 package com.coralblocks.coralbalancer;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
 final class RendezvousHashing {
@@ -26,12 +27,17 @@ final class RendezvousHashing {
     	
     }
     
-    private static void validateArguments(CharSequence key, List<CharSequence> activeNodes) {
+    private static void validateArguments(Object key, List<CharSequence> activeNodes) {
     	
     	if (key == null) {
     		throw new IllegalArgumentException("The key argument cannot be null!");
     	}
-    	
+
+        validateActiveNodes(activeNodes);
+    }
+
+    private static void validateActiveNodes(List<CharSequence> activeNodes) {
+
     	if (activeNodes == null) {
     		throw new IllegalArgumentException("They activeNodes argument cannot be null!");
     	}
@@ -43,7 +49,34 @@ final class RendezvousHashing {
 
     public static CharSequence ownerFor(CharSequence key, List<CharSequence> activeNodes) {
 
+        validateArguments(key, activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(byte[] key, List<CharSequence> activeNodes) {
+
+        validateArguments(key, activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(ByteBuffer key, List<CharSequence> activeNodes) {
+
     	validateArguments(key, activeNodes);
+
+        long keyHash = hash64(key);
+
+        return hrwHashing(keyHash, activeNodes);
+    }
+
+    public static CharSequence ownerFor(long key, List<CharSequence> activeNodes) {
+
+        validateActiveNodes(activeNodes);
 
         long keyHash = hash64(key);
 
@@ -89,6 +122,34 @@ final class RendezvousHashing {
         }
 
         return mix64(h);
+    }
+
+    private static long hash64(byte[] value) {
+
+        long h = FNV64_OFFSET;
+
+        for (int i = 0; i < value.length; i++) {
+            h ^= value[i] & 0xff;
+            h *= FNV64_PRIME;
+        }
+
+        return mix64(h);
+    }
+
+    private static long hash64(ByteBuffer value) {
+
+        long h = FNV64_OFFSET;
+
+        for (int i = value.position(); i < value.limit(); i++) {
+            h ^= value.get(i) & 0xff;
+            h *= FNV64_PRIME;
+        }
+
+        return mix64(h);
+    }
+
+    private static long hash64(long value) {
+        return mix64(value);
     }
 
     private static int compare(CharSequence a, CharSequence b) {
