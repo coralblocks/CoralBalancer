@@ -18,6 +18,7 @@ package com.coralblocks.coralbalancer;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -160,5 +161,36 @@ public class RendezvousHashingTest {
 		Assert.assertTrue(activeNodes.contains(doubleOwner));
 		Assert.assertSame(floatOwner, RendezvousHashing.ownerFor(floatKey, activeNodes));
 		Assert.assertSame(doubleOwner, RendezvousHashing.ownerFor(doubleKey, activeNodes));
+	}
+
+	@Test
+	public void testRandomKeysAreUniformlyDistributedAcrossNodes() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
+		int[] counts = new int[activeNodes.size()];
+		Random random = new Random(123456789L);
+		int sampleSize = 200_000;
+		int expectedCount = sampleSize / activeNodes.size();
+		int maxAllowedDeviation = expectedCount / 40;
+
+		for (int i = 0; i < sampleSize; i++) {
+			CharSequence owner = RendezvousHashing.ownerFor(random.nextLong(), activeNodes);
+			counts[activeNodes.indexOf(owner)]++;
+		}
+
+		System.out.println("Rendezvous hashing distribution for " + sampleSize + " random keys:");
+
+		for (int i = 0; i < counts.length; i++) {
+			double percentage = 100.0d * counts[i] / sampleSize;
+			double deviation = percentage - 25.0d;
+			System.out.printf("%s: %d keys, %.3f%%, deviation from 25%%: %+.3f%%%n",
+					activeNodes.get(i), counts[i], percentage, deviation);
+		}
+
+		for (int i = 0; i < counts.length; i++) {
+			int deviation = Math.abs(counts[i] - expectedCount);
+			Assert.assertTrue(activeNodes.get(i) + " received " + counts[i] + " keys",
+					deviation <= maxAllowedDeviation);
+		}
 	}
 }
