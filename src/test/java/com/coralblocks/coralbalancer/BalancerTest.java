@@ -15,6 +15,10 @@
  */
 package com.coralblocks.coralbalancer;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -84,5 +88,71 @@ public class BalancerTest {
 		Assert.assertEquals(false, b.hasNode(new StringBuilder("NODE2")));
 		Assert.assertEquals(false, b.hasNode("NODE1"));
 		Assert.assertEquals(false, b.hasNode("NODE2"));
+	}
+
+	@Test
+	public void testIsForMe() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
+		Balancer b = new Balancer("NODE2", 64, 6);
+
+		for (int i = 0; i < activeNodes.size(); i++) {
+			b.addNode(activeNodes.get(i));
+		}
+
+		CharSequence charSequenceKey = new StringBuilder("KEY1");
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(charSequenceKey, activeNodes), b),
+				b.isForMe(charSequenceKey));
+
+		byte[] byteArrayKey = new byte[] { 1, 2, 3, 4 };
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(byteArrayKey, activeNodes), b),
+				b.isForMe(byteArrayKey));
+
+		char[] charArrayKey = new char[] { 'K', 'E', 'Y', '1' };
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(charArrayKey, activeNodes), b),
+				b.isForMe(charArrayKey));
+
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 1, 2, 3, 4, 9 });
+		byteBufferKey.position(1);
+		byteBufferKey.limit(5);
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(byteBufferKey, activeNodes), b),
+				b.isForMe(byteBufferKey));
+		Assert.assertEquals(1, byteBufferKey.position());
+		Assert.assertEquals(5, byteBufferKey.limit());
+
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(true, activeNodes), b),
+				b.isForMe(true));
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor((byte) 7, activeNodes), b),
+				b.isForMe((byte) 7));
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor('A', activeNodes), b),
+				b.isForMe('A'));
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor((short) 123, activeNodes), b),
+				b.isForMe((short) 123));
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(456, activeNodes), b),
+				b.isForMe(456));
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(123456789L, activeNodes), b),
+				b.isForMe(123456789L));
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(123.25f, activeNodes), b),
+				b.isForMe(123.25f));
+		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(456.75d, activeNodes), b),
+				b.isForMe(456.75d));
+
+		long keyForMe = keyFor(b.getMyNodeAccount(), activeNodes);
+		long keyForOtherNode = keyFor("NODE1", activeNodes);
+
+		Assert.assertTrue(b.isForMe(keyForMe));
+		Assert.assertFalse(b.isForMe(keyForOtherNode));
+	}
+
+	private static boolean isOwnerForMe(CharSequence owner, Balancer b) {
+		return b.getMyNodeAccount().contentEquals(owner);
+	}
+
+	private static long keyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
+		for (long key = 0; key < 10_000; key++) {
+			CharSequence owner = RendezvousHashing.ownerFor(key, activeNodes);
+			if (nodeAccount.toString().contentEquals(owner)) return key;
+		}
+		throw new IllegalStateException("Could not find key for node account: " + nodeAccount);
 	}
 }

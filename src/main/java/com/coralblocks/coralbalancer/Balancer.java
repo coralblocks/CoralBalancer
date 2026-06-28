@@ -15,6 +15,7 @@
  */
 package com.coralblocks.coralbalancer;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,6 +73,54 @@ public class Balancer {
 	public boolean hasNode(CharSequence nodeAccount) {
 		return contains(nodeAccount);
 	}
+
+	public boolean isForMe(CharSequence key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(byte[] key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(char[] key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(ByteBuffer key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(boolean key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(byte key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(char key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(short key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(int key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(long key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(float key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
+
+	public boolean isForMe(double key) {
+		return isOwnerForMe(RendezvousHashing.ownerFor(key, nodes));
+	}
 	
 	private CharSequence getFromPool(CharSequence cs) {
 		StringBuilder sb = sbPool.get();
@@ -93,6 +142,10 @@ public class Balancer {
 	
 	private boolean contains(CharSequence nodeAccount) {
 		return indexOf(nodeAccount) >= 0;
+	}
+
+	private boolean isOwnerForMe(CharSequence owner) {
+		return contentEquals(owner, myNodeAccount);
 	}
 	
 	private static boolean contentEquals(CharSequence a, CharSequence b) {
