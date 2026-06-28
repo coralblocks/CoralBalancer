@@ -265,11 +265,28 @@ public class BalancerTest {
 		Assert.assertNull(getField(b, "longOwnerCache"));
 		Assert.assertNull(getField(b, "floatOwnerCache"));
 		Assert.assertNull(getField(b, "doubleOwnerCache"));
+		Assert.assertNull(getField(b, "charSequenceOwnerPins"));
+		Assert.assertNull(getField(b, "charArrayOwnerPins"));
+		Assert.assertNull(getField(b, "byteSequenceOwnerPins"));
+		Assert.assertNull(getField(b, "booleanOwnerPins"));
+		Assert.assertNull(getField(b, "byteOwnerPins"));
+		Assert.assertNull(getField(b, "charOwnerPins"));
+		Assert.assertNull(getField(b, "shortOwnerPins"));
+		Assert.assertNull(getField(b, "intOwnerPins"));
+		Assert.assertNull(getField(b, "longOwnerPins"));
+		Assert.assertNull(getField(b, "floatOwnerPins"));
+		Assert.assertNull(getField(b, "doubleOwnerPins"));
 
 		b.addNode("NODE1");
 		b.addNode("NODE2");
 
 		Assert.assertNull(getField(b, "byteOwnerCache"));
+		Assert.assertNull(getField(b, "byteOwnerPins"));
+
+		Assert.assertTrue(b.pin((byte) 8, "NODE2"));
+
+		Assert.assertNull(getField(b, "byteOwnerCache"));
+		Assert.assertNotNull(getField(b, "byteOwnerPins"));
 
 		b.ownerFor((byte) 7);
 
@@ -282,8 +299,104 @@ public class BalancerTest {
 		Assert.assertNull(getField(b, "byteSequenceOwnerCache"));
 	}
 
+	@Test
+	public void testPinBypassesOwnerCacheAndUnpinFallsBack() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
+		Balancer b = new Balancer("NODE1", 64, 6);
+		CharSequence key = "KEY1";
+
+		for (int i = 0; i < activeNodes.size(); i++) {
+			b.addNode(activeNodes.get(i));
+		}
+
+		CharSequence rendezvousOwner = RendezvousHashing.ownerFor(key, activeNodes);
+		String pinnedOwner = differentNode(rendezvousOwner, activeNodes);
+
+		Assert.assertEquals(rendezvousOwner.toString(), b.ownerFor(key).toString());
+		Assert.assertTrue(b.pin(key, pinnedOwner));
+		Assert.assertEquals(pinnedOwner, b.ownerFor(key).toString());
+		Assert.assertTrue(b.unpin(key));
+		Assert.assertFalse(b.unpin(key));
+		Assert.assertEquals(rendezvousOwner.toString(), b.ownerFor(key).toString());
+	}
+
+	@Test
+	public void testPinSupportsAllKeyTypes() {
+
+		Balancer b = new Balancer("NODE1", 64, 6);
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+		b.addNode("NODE3");
+		b.addNode("NODE4");
+
+		CharSequence charSequenceKey = new StringBuilder("PIN1");
+		Assert.assertTrue(b.pin(charSequenceKey, "NODE2"));
+		Assert.assertEquals("NODE2", b.ownerFor(charSequenceKey).toString());
+
+		byte[] byteArrayKey = new byte[] { 1, 2, 3 };
+		Assert.assertTrue(b.pin(byteArrayKey, "NODE3"));
+		Assert.assertEquals("NODE3", b.ownerFor(byteArrayKey).toString());
+
+		char[] charArrayKey = new char[] { 'P', 'I', 'N' };
+		Assert.assertTrue(b.pin(charArrayKey, "NODE4"));
+		Assert.assertEquals("NODE4", b.ownerFor(charArrayKey).toString());
+
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 4, 5, 6, 9 });
+		byteBufferKey.position(1);
+		byteBufferKey.limit(4);
+		Assert.assertTrue(b.pin(byteBufferKey, "NODE2"));
+		Assert.assertEquals("NODE2", b.ownerFor(byteBufferKey).toString());
+		Assert.assertEquals(1, byteBufferKey.position());
+		Assert.assertEquals(4, byteBufferKey.limit());
+
+		Assert.assertTrue(b.pin(true, "NODE3"));
+		Assert.assertEquals("NODE3", b.ownerFor(true).toString());
+		Assert.assertTrue(b.pin((byte) 7, "NODE4"));
+		Assert.assertEquals("NODE4", b.ownerFor((byte) 7).toString());
+		Assert.assertTrue(b.pin('A', "NODE2"));
+		Assert.assertEquals("NODE2", b.ownerFor('A').toString());
+		Assert.assertTrue(b.pin((short) 123, "NODE3"));
+		Assert.assertEquals("NODE3", b.ownerFor((short) 123).toString());
+		Assert.assertTrue(b.pin(456, "NODE4"));
+		Assert.assertEquals("NODE4", b.ownerFor(456).toString());
+		Assert.assertTrue(b.pin(123456789L, "NODE2"));
+		Assert.assertEquals("NODE2", b.ownerFor(123456789L).toString());
+		Assert.assertTrue(b.pin(123.25f, "NODE3"));
+		Assert.assertEquals("NODE3", b.ownerFor(123.25f).toString());
+		Assert.assertTrue(b.pin(456.75d, "NODE4"));
+		Assert.assertEquals("NODE4", b.ownerFor(456.75d).toString());
+	}
+
+	@Test
+	public void testPinReturnsFalseForOversizedVariableKeys() {
+
+		Balancer b = new Balancer("NODE1", 64, 6, (short) 3);
+		CharSequence charSequenceKey = new StringBuilder("PIN1");
+		byte[] byteArrayKey = new byte[] { 1, 2, 3, 4 };
+		char[] charArrayKey = new char[] { 'P', 'I', 'N', '1' };
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 1, 2, 3, 4 });
+
+		Assert.assertFalse(b.pin(charSequenceKey, "NODE2"));
+		Assert.assertFalse(b.pin(byteArrayKey, "NODE2"));
+		Assert.assertFalse(b.pin(charArrayKey, "NODE2"));
+		Assert.assertFalse(b.pin(byteBufferKey, "NODE2"));
+		Assert.assertFalse(b.unpin(charSequenceKey));
+		Assert.assertFalse(b.unpin(byteArrayKey));
+		Assert.assertFalse(b.unpin(charArrayKey));
+		Assert.assertFalse(b.unpin(byteBufferKey));
+	}
+
 	private static boolean isOwnerForMe(CharSequence owner, Balancer b) {
 		return b.getMyNodeAccount().contentEquals(owner);
+	}
+
+	private static String differentNode(CharSequence owner, List<CharSequence> activeNodes) {
+		for (int i = 0; i < activeNodes.size(); i++) {
+			CharSequence node = activeNodes.get(i);
+			if (!node.toString().contentEquals(owner)) return node.toString();
+		}
+		throw new IllegalStateException("Could not find a different node for owner: " + owner);
 	}
 
 	private static Object getField(Object target, String fieldName) throws Exception {

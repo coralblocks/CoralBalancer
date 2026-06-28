@@ -54,6 +54,18 @@ public class Balancer {
 	private LongMap<CharSequence> longOwnerCache = null;
 	private IntMap<CharSequence> floatOwnerCache = null;
 	private LongMap<CharSequence> doubleOwnerCache = null;
+
+	private CharSequenceMap<CharSequence> charSequenceOwnerPins = null;
+	private CharSequenceMap<CharSequence> charArrayOwnerPins = null;
+	private ByteBufferMap<CharSequence> byteSequenceOwnerPins = null;
+	private ByteMap<CharSequence> booleanOwnerPins = null;
+	private ByteMap<CharSequence> byteOwnerPins = null;
+	private IntMap<CharSequence> charOwnerPins = null;
+	private IntMap<CharSequence> shortOwnerPins = null;
+	private IntMap<CharSequence> intOwnerPins = null;
+	private LongMap<CharSequence> longOwnerPins = null;
+	private IntMap<CharSequence> floatOwnerPins = null;
+	private LongMap<CharSequence> doubleOwnerPins = null;
 	
 	public Balancer(CharSequence myNodeAccount) {
 		this(myNodeAccount, DEFAULT_MAX_NUMBER_OF_NODES);
@@ -123,12 +135,148 @@ public class Balancer {
 		return contains(nodeAccount);
 	}
 
+	public boolean pin(CharSequence key, CharSequence nodeAccount) {
+		ensureKeyNotNull(key);
+		if (!canPinVariableKey(key.length())) return false;
+		getCharSequenceOwnerPins().put(key, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(byte[] key, CharSequence nodeAccount) {
+		ensureKeyNotNull(key);
+		if (!canPinVariableKey(key.length)) return false;
+		getByteSequenceOwnerPins().put(key, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(char[] key, CharSequence nodeAccount) {
+		ensureKeyNotNull(key);
+		if (!canPinVariableKey(key.length)) return false;
+		charArrayView.wrap(key);
+		getCharArrayOwnerPins().put(charArrayView, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(ByteBuffer key, CharSequence nodeAccount) {
+		ensureKeyNotNull(key);
+		if (!canPinVariableKey(key.remaining())) return false;
+		getByteSequenceOwnerPins().put(key, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(boolean key, CharSequence nodeAccount) {
+		byte cacheKey = key ? (byte) 1 : (byte) 0;
+		getBooleanOwnerPins().put(cacheKey, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(byte key, CharSequence nodeAccount) {
+		getByteOwnerPins().put(key, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(char key, CharSequence nodeAccount) {
+		getCharOwnerPins().put(key, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(short key, CharSequence nodeAccount) {
+		getShortOwnerPins().put(key, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(int key, CharSequence nodeAccount) {
+		getIntOwnerPins().put(key, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(long key, CharSequence nodeAccount) {
+		getLongOwnerPins().put(key, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(float key, CharSequence nodeAccount) {
+		int cacheKey = Float.floatToIntBits(key);
+		getFloatOwnerPins().put(cacheKey, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean pin(double key, CharSequence nodeAccount) {
+		long cacheKey = Double.doubleToLongBits(key);
+		getDoubleOwnerPins().put(cacheKey, copyNodeAccount(nodeAccount));
+		return true;
+	}
+
+	public boolean unpin(CharSequence key) {
+		ensureKeyNotNull(key);
+		if (key.length() > maxCachedVariableKeyLength) return false;
+		return charSequenceOwnerPins != null && charSequenceOwnerPins.remove(key) != null;
+	}
+
+	public boolean unpin(byte[] key) {
+		ensureKeyNotNull(key);
+		if (key.length > maxCachedVariableKeyLength) return false;
+		return byteSequenceOwnerPins != null && byteSequenceOwnerPins.remove(key) != null;
+	}
+
+	public boolean unpin(char[] key) {
+		ensureKeyNotNull(key);
+		if (key.length > maxCachedVariableKeyLength) return false;
+		if (charArrayOwnerPins == null) return false;
+		charArrayView.wrap(key);
+		return charArrayOwnerPins.remove(charArrayView) != null;
+	}
+
+	public boolean unpin(ByteBuffer key) {
+		ensureKeyNotNull(key);
+		if (key.remaining() > maxCachedVariableKeyLength) return false;
+		return byteSequenceOwnerPins != null && byteSequenceOwnerPins.remove(key) != null;
+	}
+
+	public boolean unpin(boolean key) {
+		byte cacheKey = key ? (byte) 1 : (byte) 0;
+		return booleanOwnerPins != null && booleanOwnerPins.remove(cacheKey) != null;
+	}
+
+	public boolean unpin(byte key) {
+		return byteOwnerPins != null && byteOwnerPins.remove(key) != null;
+	}
+
+	public boolean unpin(char key) {
+		return charOwnerPins != null && charOwnerPins.remove(key) != null;
+	}
+
+	public boolean unpin(short key) {
+		return shortOwnerPins != null && shortOwnerPins.remove(key) != null;
+	}
+
+	public boolean unpin(int key) {
+		return intOwnerPins != null && intOwnerPins.remove(key) != null;
+	}
+
+	public boolean unpin(long key) {
+		return longOwnerPins != null && longOwnerPins.remove(key) != null;
+	}
+
+	public boolean unpin(float key) {
+		int cacheKey = Float.floatToIntBits(key);
+		return floatOwnerPins != null && floatOwnerPins.remove(cacheKey) != null;
+	}
+
+	public boolean unpin(double key) {
+		long cacheKey = Double.doubleToLongBits(key);
+		return doubleOwnerPins != null && doubleOwnerPins.remove(cacheKey) != null;
+	}
+
 	public CharSequence ownerFor(CharSequence key) {
 		ensureKeyNotNull(key);
 		if (key.length() > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
 
+		CharSequence owner = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.get(key);
+		if (owner != null) return owner;
+
 		CharSequenceMap<CharSequence> cache = getCharSequenceOwnerCache();
-		CharSequence owner = cache.get(key);
+		owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -140,8 +288,11 @@ public class Balancer {
 		ensureKeyNotNull(key);
 		if (key.length > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
 
+		CharSequence owner = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.get(key);
+		if (owner != null) return owner;
+
 		ByteBufferMap<CharSequence> cache = getByteSequenceOwnerCache();
-		CharSequence owner = cache.get(key);
+		owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -155,8 +306,11 @@ public class Balancer {
 
 		charArrayView.wrap(key);
 
+		CharSequence owner = charArrayOwnerPins == null ? null : charArrayOwnerPins.get(charArrayView);
+		if (owner != null) return owner;
+
 		CharSequenceMap<CharSequence> cache = getCharArrayOwnerCache();
-		CharSequence owner = cache.get(charArrayView);
+		owner = cache.get(charArrayView);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -168,8 +322,11 @@ public class Balancer {
 		ensureKeyNotNull(key);
 		if (key.remaining() > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
 
+		CharSequence owner = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.get(key);
+		if (owner != null) return owner;
+
 		ByteBufferMap<CharSequence> cache = getByteSequenceOwnerCache();
-		CharSequence owner = cache.get(key);
+		owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -179,8 +336,11 @@ public class Balancer {
 
 	public CharSequence ownerFor(boolean key) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
+		CharSequence owner = booleanOwnerPins == null ? null : booleanOwnerPins.get(cacheKey);
+		if (owner != null) return owner;
+
 		ByteMap<CharSequence> cache = getBooleanOwnerCache();
-		CharSequence owner = cache.get(cacheKey);
+		owner = cache.get(cacheKey);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -189,8 +349,11 @@ public class Balancer {
 	}
 
 	public CharSequence ownerFor(byte key) {
+		CharSequence owner = byteOwnerPins == null ? null : byteOwnerPins.get(key);
+		if (owner != null) return owner;
+
 		ByteMap<CharSequence> cache = getByteOwnerCache();
-		CharSequence owner = cache.get(key);
+		owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -199,8 +362,11 @@ public class Balancer {
 	}
 
 	public CharSequence ownerFor(char key) {
+		CharSequence owner = charOwnerPins == null ? null : charOwnerPins.get(key);
+		if (owner != null) return owner;
+
 		IntMap<CharSequence> cache = getCharOwnerCache();
-		CharSequence owner = cache.get(key);
+		owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -209,8 +375,11 @@ public class Balancer {
 	}
 
 	public CharSequence ownerFor(short key) {
+		CharSequence owner = shortOwnerPins == null ? null : shortOwnerPins.get(key);
+		if (owner != null) return owner;
+
 		IntMap<CharSequence> cache = getShortOwnerCache();
-		CharSequence owner = cache.get(key);
+		owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -219,8 +388,11 @@ public class Balancer {
 	}
 
 	public CharSequence ownerFor(int key) {
+		CharSequence owner = intOwnerPins == null ? null : intOwnerPins.get(key);
+		if (owner != null) return owner;
+
 		IntMap<CharSequence> cache = getIntOwnerCache();
-		CharSequence owner = cache.get(key);
+		owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -229,8 +401,11 @@ public class Balancer {
 	}
 
 	public CharSequence ownerFor(long key) {
+		CharSequence owner = longOwnerPins == null ? null : longOwnerPins.get(key);
+		if (owner != null) return owner;
+
 		LongMap<CharSequence> cache = getLongOwnerCache();
-		CharSequence owner = cache.get(key);
+		owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -240,8 +415,11 @@ public class Balancer {
 
 	public CharSequence ownerFor(float key) {
 		int cacheKey = Float.floatToIntBits(key);
+		CharSequence owner = floatOwnerPins == null ? null : floatOwnerPins.get(cacheKey);
+		if (owner != null) return owner;
+
 		IntMap<CharSequence> cache = getFloatOwnerCache();
-		CharSequence owner = cache.get(cacheKey);
+		owner = cache.get(cacheKey);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -251,8 +429,11 @@ public class Balancer {
 
 	public CharSequence ownerFor(double key) {
 		long cacheKey = Double.doubleToLongBits(key);
+		CharSequence owner = doubleOwnerPins == null ? null : doubleOwnerPins.get(cacheKey);
+		if (owner != null) return owner;
+
 		LongMap<CharSequence> cache = getDoubleOwnerCache();
-		CharSequence owner = cache.get(cacheKey);
+		owner = cache.get(cacheKey);
 		if (owner != null) return owner;
 
 		owner = RendezvousHashing.ownerFor(key, nodes);
@@ -423,6 +604,94 @@ public class Balancer {
 			doubleOwnerCache = new LongMap<CharSequence>(initialCacheCapacity);
 		}
 		return doubleOwnerCache;
+	}
+
+	private CharSequenceMap<CharSequence> getCharSequenceOwnerPins() {
+		if (charSequenceOwnerPins == null) {
+			charSequenceOwnerPins = new CharSequenceMap<CharSequence>(initialCacheCapacity, maxCachedVariableKeyLength);
+		}
+		return charSequenceOwnerPins;
+	}
+
+	private CharSequenceMap<CharSequence> getCharArrayOwnerPins() {
+		if (charArrayOwnerPins == null) {
+			charArrayOwnerPins = new CharSequenceMap<CharSequence>(initialCacheCapacity, maxCachedVariableKeyLength);
+		}
+		return charArrayOwnerPins;
+	}
+
+	private ByteBufferMap<CharSequence> getByteSequenceOwnerPins() {
+		if (byteSequenceOwnerPins == null) {
+			byteSequenceOwnerPins = new ByteBufferMap<CharSequence>(initialCacheCapacity, maxCachedVariableKeyLength);
+		}
+		return byteSequenceOwnerPins;
+	}
+
+	private ByteMap<CharSequence> getBooleanOwnerPins() {
+		if (booleanOwnerPins == null) {
+			booleanOwnerPins = new ByteMap<CharSequence>();
+		}
+		return booleanOwnerPins;
+	}
+
+	private ByteMap<CharSequence> getByteOwnerPins() {
+		if (byteOwnerPins == null) {
+			byteOwnerPins = new ByteMap<CharSequence>();
+		}
+		return byteOwnerPins;
+	}
+
+	private IntMap<CharSequence> getCharOwnerPins() {
+		if (charOwnerPins == null) {
+			charOwnerPins = new IntMap<CharSequence>(initialCacheCapacity);
+		}
+		return charOwnerPins;
+	}
+
+	private IntMap<CharSequence> getShortOwnerPins() {
+		if (shortOwnerPins == null) {
+			shortOwnerPins = new IntMap<CharSequence>(initialCacheCapacity);
+		}
+		return shortOwnerPins;
+	}
+
+	private IntMap<CharSequence> getIntOwnerPins() {
+		if (intOwnerPins == null) {
+			intOwnerPins = new IntMap<CharSequence>(initialCacheCapacity);
+		}
+		return intOwnerPins;
+	}
+
+	private LongMap<CharSequence> getLongOwnerPins() {
+		if (longOwnerPins == null) {
+			longOwnerPins = new LongMap<CharSequence>(initialCacheCapacity);
+		}
+		return longOwnerPins;
+	}
+
+	private IntMap<CharSequence> getFloatOwnerPins() {
+		if (floatOwnerPins == null) {
+			floatOwnerPins = new IntMap<CharSequence>(initialCacheCapacity);
+		}
+		return floatOwnerPins;
+	}
+
+	private LongMap<CharSequence> getDoubleOwnerPins() {
+		if (doubleOwnerPins == null) {
+			doubleOwnerPins = new LongMap<CharSequence>(initialCacheCapacity);
+		}
+		return doubleOwnerPins;
+	}
+
+	private String copyNodeAccount(CharSequence nodeAccount) {
+		if (nodeAccount == null) {
+			throw new IllegalArgumentException("The nodeAccount argument cannot be null!");
+		}
+		return nodeAccount.toString();
+	}
+
+	private boolean canPinVariableKey(int len) {
+		return len <= maxCachedVariableKeyLength;
 	}
 
 	private static void ensureKeyNotNull(Object key) {
