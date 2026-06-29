@@ -1,6 +1,6 @@
 # CoralBalancer
 
-CoralBalancer is a deterministic, garbage-free and fast _key-to-node_ balancer for Java. It uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) to deterministically balance any key (of any type) uniformly by choosing a node from a set of nodes. It is meant to be used in deterministic, single-topic, single-threaded, event-stream architectures where every node receives all messages. With CoralBalancer, each node builds the same balancer state, then uses the `isForMe(key)` method to decide whether it should handle a message or not. It supports pinning, allowing a specific key to be pinned to a specific node, bypassing hashing.
+CoralBalancer is a deterministic, garbage-free and fast _key-to-node_ balancer for event-stream distributed systems. It uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) to deterministically balance any key (of any type) uniformly by choosing a node from a set of nodes. It is meant to be used in deterministic, single-topic, single-threaded, event-stream architectures where every node receives all messages. With CoralBalancer, each node builds the same balancer state, then uses the `isForMe(key)` method to decide whether it should handle a message or not. It supports pinning, allowing a specific key to be pinned to a specific node, bypassing hashing.
 
 ## Example
 
