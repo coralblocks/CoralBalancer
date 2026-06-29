@@ -374,7 +374,7 @@ public class Balancer {
 	public boolean unpin(CharSequence key) {
 		ensureKeyNotNull(key);
 		if (key.length() > maxCachedVariableKeyLength) return false;
-		return releaseRemovedPin(charSequenceOwnerPins == null ? null : charSequenceOwnerPins.remove(key));
+		return releaseNodeAccount(charSequenceOwnerPins == null ? null : charSequenceOwnerPins.remove(key));
 	}
 
 	/**
@@ -386,7 +386,7 @@ public class Balancer {
 	public boolean unpin(byte[] key) {
 		ensureKeyNotNull(key);
 		if (key.length > maxCachedVariableKeyLength) return false;
-		return releaseRemovedPin(byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key));
+		return releaseNodeAccount(byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key));
 	}
 
 	/**
@@ -400,7 +400,7 @@ public class Balancer {
 		if (key.length > maxCachedVariableKeyLength) return false;
 		if (charArrayOwnerPins == null) return false;
 		charArrayView.wrap(key);
-		return releaseRemovedPin(charArrayOwnerPins.remove(charArrayView));
+		return releaseNodeAccount(charArrayOwnerPins.remove(charArrayView));
 	}
 
 	/**
@@ -412,7 +412,7 @@ public class Balancer {
 	public boolean unpin(ByteBuffer key) {
 		ensureKeyNotNull(key);
 		if (key.remaining() > maxCachedVariableKeyLength) return false;
-		return releaseRemovedPin(byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key));
+		return releaseNodeAccount(byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key));
 	}
 
 	/**
@@ -423,7 +423,7 @@ public class Balancer {
 	 */
 	public boolean unpin(boolean key) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
-		return releaseRemovedPin(booleanOwnerPins == null ? null : booleanOwnerPins.remove(cacheKey));
+		return releaseNodeAccount(booleanOwnerPins == null ? null : booleanOwnerPins.remove(cacheKey));
 	}
 
 	/**
@@ -433,7 +433,7 @@ public class Balancer {
 	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
 	public boolean unpin(byte key) {
-		return releaseRemovedPin(byteOwnerPins == null ? null : byteOwnerPins.remove(key));
+		return releaseNodeAccount(byteOwnerPins == null ? null : byteOwnerPins.remove(key));
 	}
 
 	/**
@@ -443,7 +443,7 @@ public class Balancer {
 	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
 	public boolean unpin(char key) {
-		return releaseRemovedPin(charOwnerPins == null ? null : charOwnerPins.remove(key));
+		return releaseNodeAccount(charOwnerPins == null ? null : charOwnerPins.remove(key));
 	}
 
 	/**
@@ -453,7 +453,7 @@ public class Balancer {
 	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
 	public boolean unpin(short key) {
-		return releaseRemovedPin(shortOwnerPins == null ? null : shortOwnerPins.remove(key));
+		return releaseNodeAccount(shortOwnerPins == null ? null : shortOwnerPins.remove(key));
 	}
 
 	/**
@@ -463,7 +463,7 @@ public class Balancer {
 	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
 	public boolean unpin(int key) {
-		return releaseRemovedPin(intOwnerPins == null ? null : intOwnerPins.remove(key));
+		return releaseNodeAccount(intOwnerPins == null ? null : intOwnerPins.remove(key));
 	}
 
 	/**
@@ -473,7 +473,7 @@ public class Balancer {
 	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
 	public boolean unpin(long key) {
-		return releaseRemovedPin(longOwnerPins == null ? null : longOwnerPins.remove(key));
+		return releaseNodeAccount(longOwnerPins == null ? null : longOwnerPins.remove(key));
 	}
 
 	/**
@@ -484,7 +484,7 @@ public class Balancer {
 	 */
 	public boolean unpin(float key) {
 		int cacheKey = Float.floatToIntBits(key);
-		return releaseRemovedPin(floatOwnerPins == null ? null : floatOwnerPins.remove(cacheKey));
+		return releaseNodeAccount(floatOwnerPins == null ? null : floatOwnerPins.remove(cacheKey));
 	}
 
 	/**
@@ -495,7 +495,7 @@ public class Balancer {
 	 */
 	public boolean unpin(double key) {
 		long cacheKey = Double.doubleToLongBits(key);
-		return releaseRemovedPin(doubleOwnerPins == null ? null : doubleOwnerPins.remove(cacheKey));
+		return releaseNodeAccount(doubleOwnerPins == null ? null : doubleOwnerPins.remove(cacheKey));
 	}
 
 	/**
@@ -1064,15 +1064,9 @@ public class Balancer {
 		return getFromPool(nodeAccount);
 	}
 
-	private void releaseNodeAccount(CharSequence nodeAccount) {
-		if (nodeAccount != null) {
-			sbPool.release((StringBuilder) nodeAccount);
-		}
-	}
-
-	private boolean releaseRemovedPin(CharSequence nodeAccount) {
+	private boolean releaseNodeAccount(CharSequence nodeAccount) {
 		if (nodeAccount == null) return false;
-		releaseNodeAccount(nodeAccount);
+		sbPool.release((StringBuilder) nodeAccount);
 		return true;
 	}
 
