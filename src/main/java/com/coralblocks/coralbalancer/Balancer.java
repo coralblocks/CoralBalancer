@@ -24,7 +24,7 @@ import com.coralblocks.coralds.map.ByteMap;
 import com.coralblocks.coralds.map.CharSequenceMap;
 import com.coralblocks.coralds.map.IntMap;
 import com.coralblocks.coralds.map.LongMap;
-import com.coralblocks.coralpool.ArrayObjectPool;
+import com.coralblocks.coralpool.LinkedObjectPool;
 import com.coralblocks.coralpool.ObjectBuilder;
 import com.coralblocks.coralpool.ObjectPool;
 
@@ -136,7 +136,7 @@ public class Balancer {
 
 		int preloadCount = Math.max(maxNumberOfNodes / 2, 1);
 
-		this.sbPool = new ArrayObjectPool<StringBuilder>(maxNumberOfNodes, preloadCount, builder);
+		this.sbPool = new LinkedObjectPool<StringBuilder>(maxNumberOfNodes, preloadCount, builder);
 
 		this.myNodeAccount = myNodeAccount.toString();
 		

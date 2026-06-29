@@ -16,6 +16,7 @@
 package com.coralblocks.coralbalancer;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -330,19 +331,19 @@ public class BalancerTest {
 		b.addNode("NODE1");
 		b.addNode("NODE2");
 
-		int pointerBeforePin = getStringBuilderPoolPointer(b);
+		int poolSizeBeforePin = getStringBuilderPoolSize(b);
 
 		Assert.assertTrue(b.pin(key, "NODE2"));
-		Assert.assertEquals(pointerBeforePin + 1, getStringBuilderPoolPointer(b));
+		Assert.assertEquals(poolSizeBeforePin - 1, getStringBuilderPoolSize(b));
 		Assert.assertTrue(b.ownerFor(key) instanceof StringBuilder);
 		Assert.assertEquals("NODE2", b.ownerFor(key).toString());
 
 		Assert.assertTrue(b.pin(key, "NODE1"));
-		Assert.assertEquals(pointerBeforePin + 1, getStringBuilderPoolPointer(b));
+		Assert.assertEquals(poolSizeBeforePin - 1, getStringBuilderPoolSize(b));
 		Assert.assertEquals("NODE1", b.ownerFor(key).toString());
 
 		Assert.assertTrue(b.unpin(key));
-		Assert.assertEquals(pointerBeforePin, getStringBuilderPoolPointer(b));
+		Assert.assertEquals(poolSizeBeforePin, getStringBuilderPoolSize(b));
 	}
 
 	@Test
@@ -429,11 +430,11 @@ public class BalancerTest {
 		return field.get(target);
 	}
 
-	private static int getStringBuilderPoolPointer(Balancer b) throws Exception {
+	private static int getStringBuilderPoolSize(Balancer b) throws Exception {
 		Object pool = getField(b, "sbPool");
-		Field field = pool.getClass().getDeclaredField("pointer");
-		field.setAccessible(true);
-		return field.getInt(pool);
+		Method method = pool.getClass().getDeclaredMethod("getLinkedListSize");
+		method.setAccessible(true);
+		return ((Integer) method.invoke(pool)).intValue();
 	}
 
 	private static long keyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
