@@ -322,6 +322,30 @@ public class BalancerTest {
 	}
 
 	@Test
+	public void testPinUsesPooledNodeAccountsAndUnpinReleasesThem() throws Exception {
+
+		Balancer b = new Balancer("NODE1", 64, 6);
+		CharSequence key = "KEY1";
+
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+
+		int pointerBeforePin = getStringBuilderPoolPointer(b);
+
+		Assert.assertTrue(b.pin(key, "NODE2"));
+		Assert.assertEquals(pointerBeforePin + 1, getStringBuilderPoolPointer(b));
+		Assert.assertTrue(b.ownerFor(key) instanceof StringBuilder);
+		Assert.assertEquals("NODE2", b.ownerFor(key).toString());
+
+		Assert.assertTrue(b.pin(key, "NODE1"));
+		Assert.assertEquals(pointerBeforePin + 1, getStringBuilderPoolPointer(b));
+		Assert.assertEquals("NODE1", b.ownerFor(key).toString());
+
+		Assert.assertTrue(b.unpin(key));
+		Assert.assertEquals(pointerBeforePin, getStringBuilderPoolPointer(b));
+	}
+
+	@Test
 	public void testPinSupportsAllKeyTypes() {
 
 		Balancer b = new Balancer("NODE1", 64, 6);
@@ -403,6 +427,13 @@ public class BalancerTest {
 		Field field = target.getClass().getDeclaredField(fieldName);
 		field.setAccessible(true);
 		return field.get(target);
+	}
+
+	private static int getStringBuilderPoolPointer(Balancer b) throws Exception {
+		Object pool = getField(b, "sbPool");
+		Field field = pool.getClass().getDeclaredField("pointer");
+		field.setAccessible(true);
+		return field.getInt(pool);
 	}
 
 	private static long keyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
