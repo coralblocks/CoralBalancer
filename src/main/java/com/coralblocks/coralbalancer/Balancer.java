@@ -214,7 +214,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the key was pinned; {@code false} if the key is too long to pin
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(CharSequence key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
@@ -229,7 +229,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the key was pinned; {@code false} if the key is too long to pin
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(byte[] key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
@@ -244,7 +244,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the key was pinned; {@code false} if the key is too long to pin
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(char[] key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
@@ -260,7 +260,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin, using bytes from position to limit
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the key was pinned; {@code false} if the remaining key length is too long to pin
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(ByteBuffer key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
@@ -275,7 +275,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} after the key is pinned
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(boolean key, CharSequence nodeAccount) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
@@ -289,7 +289,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} after the key is pinned
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(byte key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getByteOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
@@ -302,7 +302,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} after the key is pinned
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(char key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getCharOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
@@ -315,7 +315,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} after the key is pinned
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(short key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getShortOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
@@ -328,7 +328,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} after the key is pinned
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(int key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getIntOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
@@ -341,7 +341,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} after the key is pinned
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(long key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getLongOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
@@ -354,7 +354,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} after the key is pinned
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(float key, CharSequence nodeAccount) {
 		int cacheKey = Float.floatToIntBits(key);
@@ -368,7 +368,7 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} after the key is pinned
+	 * @return {@code true} if the pin succeeds; {@code false} otherwise
 	 */
 	public boolean pin(double key, CharSequence nodeAccount) {
 		long cacheKey = Double.doubleToLongBits(key);
@@ -378,172 +378,148 @@ public class Balancer {
 	}
 
 	/**
-	 * Removes a pin for a {@link CharSequence} key.
+	 * Removes a pin for a {@link CharSequence} key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(CharSequence key) {
+	public void unpin(CharSequence key) {
 		ensureKeyNotNull(key);
-		if (key.length() > maxCachedVariableKeyLength) return false;
+		if (key.length() > maxCachedVariableKeyLength) return;
 		CharSequence oldNodeAccount = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.remove(key);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a byte array key.
+	 * Removes a pin for a byte array key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(byte[] key) {
+	public void unpin(byte[] key) {
 		ensureKeyNotNull(key);
-		if (key.length > maxCachedVariableKeyLength) return false;
+		if (key.length > maxCachedVariableKeyLength) return;
 		CharSequence oldNodeAccount = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a char array key.
+	 * Removes a pin for a char array key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(char[] key) {
+	public void unpin(char[] key) {
 		ensureKeyNotNull(key);
-		if (key.length > maxCachedVariableKeyLength) return false;
-		if (charArrayOwnerPins == null) return false;
+		if (key.length > maxCachedVariableKeyLength) return;
+		if (charArrayOwnerPins == null) return;
 		charArrayView.wrap(key);
 		CharSequence oldNodeAccount = charArrayOwnerPins.remove(charArrayView);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a {@link ByteBuffer} key.
+	 * Removes a pin for a {@link ByteBuffer} key if present.
 	 *
 	 * @param key the key to unpin, using bytes from position to limit
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(ByteBuffer key) {
+	public void unpin(ByteBuffer key) {
 		ensureKeyNotNull(key);
-		if (key.remaining() > maxCachedVariableKeyLength) return false;
+		if (key.remaining() > maxCachedVariableKeyLength) return;
 		CharSequence oldNodeAccount = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a boolean key.
+	 * Removes a pin for a boolean key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(boolean key) {
+	public void unpin(boolean key) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
 		CharSequence oldNodeAccount = booleanOwnerPins == null ? null : booleanOwnerPins.remove(cacheKey);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a byte key.
+	 * Removes a pin for a byte key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(byte key) {
+	public void unpin(byte key) {
 		CharSequence oldNodeAccount = byteOwnerPins == null ? null : byteOwnerPins.remove(key);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a char key.
+	 * Removes a pin for a char key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(char key) {
+	public void unpin(char key) {
 		CharSequence oldNodeAccount = charOwnerPins == null ? null : charOwnerPins.remove(key);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a short key.
+	 * Removes a pin for a short key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(short key) {
+	public void unpin(short key) {
 		CharSequence oldNodeAccount = shortOwnerPins == null ? null : shortOwnerPins.remove(key);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for an int key.
+	 * Removes a pin for an int key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(int key) {
+	public void unpin(int key) {
 		CharSequence oldNodeAccount = intOwnerPins == null ? null : intOwnerPins.remove(key);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a long key.
+	 * Removes a pin for a long key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(long key) {
+	public void unpin(long key) {
 		CharSequence oldNodeAccount = longOwnerPins == null ? null : longOwnerPins.remove(key);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a float key.
+	 * Removes a pin for a float key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(float key) {
+	public void unpin(float key) {
 		int cacheKey = Float.floatToIntBits(key);
 		CharSequence oldNodeAccount = floatOwnerPins == null ? null : floatOwnerPins.remove(cacheKey);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
-	 * Removes a pin for a double key.
+	 * Removes a pin for a double key if present.
 	 *
 	 * @param key the key to unpin
-	 * @return {@code true} if a pin was removed; {@code false} otherwise
 	 */
-	public boolean unpin(double key) {
+	public void unpin(double key) {
 		long cacheKey = Double.doubleToLongBits(key);
 		CharSequence oldNodeAccount = doubleOwnerPins == null ? null : doubleOwnerPins.remove(cacheKey);
-		if (oldNodeAccount == null) return false;
+		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**

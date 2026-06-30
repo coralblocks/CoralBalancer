@@ -317,8 +317,8 @@ public class BalancerTest {
 		Assert.assertEquals(rendezvousOwner.toString(), b.ownerFor(key).toString());
 		Assert.assertTrue(b.pin(key, pinnedOwner));
 		Assert.assertEquals(pinnedOwner, b.ownerFor(key).toString());
-		Assert.assertTrue(b.unpin(key));
-		Assert.assertFalse(b.unpin(key));
+		b.unpin(key);
+		b.unpin(key);
 		Assert.assertEquals(rendezvousOwner.toString(), b.ownerFor(key).toString());
 	}
 
@@ -342,7 +342,7 @@ public class BalancerTest {
 		Assert.assertEquals(poolSizeBeforePin - 1, getStringBuilderPoolSize(b));
 		Assert.assertEquals("NODE1", b.ownerFor(key).toString());
 
-		Assert.assertTrue(b.unpin(key));
+		b.unpin(key);
 		Assert.assertEquals(poolSizeBeforePin, getStringBuilderPoolSize(b));
 	}
 
@@ -406,10 +406,10 @@ public class BalancerTest {
 		Assert.assertFalse(b.pin(byteArrayKey, "NODE2"));
 		Assert.assertFalse(b.pin(charArrayKey, "NODE2"));
 		Assert.assertFalse(b.pin(byteBufferKey, "NODE2"));
-		Assert.assertFalse(b.unpin(charSequenceKey));
-		Assert.assertFalse(b.unpin(byteArrayKey));
-		Assert.assertFalse(b.unpin(charArrayKey));
-		Assert.assertFalse(b.unpin(byteBufferKey));
+		b.unpin(charSequenceKey);
+		b.unpin(byteArrayKey);
+		b.unpin(charArrayKey);
+		b.unpin(byteBufferKey);
 	}
 
 	private static boolean isOwnerForMe(CharSequence owner, Balancer b) {
