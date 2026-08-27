@@ -90,8 +90,12 @@ public class Balancer {
 	 * Creates a balancer for the given local node account.
 	 *
 	 * @param myNodeAccount the local account used by {@code isForMe}; not automatically added to the active node list
+	 * @throws IllegalArgumentException if {@code myNodeAccount} is {@code null}
 	 */
 	public Balancer(CharSequence myNodeAccount) {
+		if (myNodeAccount == null) {
+			throw new IllegalArgumentException("The myNodeAccount argument cannot be null!");
+		}
 		this.nodes = new CharSequence[MAX_NUMBER_OF_NODES];
 		this.nodeHashes = new long[MAX_NUMBER_OF_NODES];
 		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {

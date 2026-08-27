@@ -126,6 +126,16 @@ public class BalancerTest {
 	}
 
 	@Test
+	public void testNullMyNodeAccountIsRejected() {
+		try {
+			new Balancer(null);
+			Assert.fail("Expected a null local node account to be rejected");
+		} catch (IllegalArgumentException expected) {
+			Assert.assertEquals("The myNodeAccount argument cannot be null!", expected.getMessage());
+		}
+	}
+
+	@Test
 	public void testIsForMe() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
