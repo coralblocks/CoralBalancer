@@ -35,6 +35,10 @@ import com.coralblocks.coralpool.ObjectPool;
  * <p>A {@code Balancer} represents one local node. In a deterministic message
  * stream, all nodes should build the same active node list and then call
  * {@code isForMe(key)} to decide whether the local node should handle the key or not.</p>
+ *
+ * <p>The local node account identifies the node used by {@code isForMe}; it is not
+ * automatically added to the active node list. This allows a balancer to represent
+ * a pin-only node that does not receive keys through hashing.</p>
  */
 public class Balancer {
 
@@ -79,7 +83,7 @@ public class Balancer {
 	/**
 	 * Creates a balancer for the given local node account.
 	 *
-	 * @param myNodeAccount the account of the local node
+	 * @param myNodeAccount the local account used by {@code isForMe}; not automatically added to the active node list
 	 */
 	public Balancer(CharSequence myNodeAccount) {
 		this(myNodeAccount, DEFAULT_MAX_NUMBER_OF_NODES);
@@ -88,7 +92,7 @@ public class Balancer {
 	/**
 	 * Creates a balancer for the given local node account.
 	 *
-	 * @param myNodeAccount the account of the local node
+	 * @param myNodeAccount the local account used by {@code isForMe}; not automatically added to the active node list
 	 * @param maxNumberOfNodes the maximum number of active nodes
 	 */
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes) {
@@ -98,7 +102,7 @@ public class Balancer {
 	/**
 	 * Creates a balancer for the given local node account.
 	 *
-	 * @param myNodeAccount the account of the local node
+	 * @param myNodeAccount the local account used by {@code isForMe}; not automatically added to the active node list
 	 * @param maxNumberOfNodes the maximum number of active nodes
 	 * @param maxNodeAccountLength the maximum expected node account length
 	 */
@@ -109,7 +113,7 @@ public class Balancer {
 	/**
 	 * Creates a balancer for the given local node account.
 	 *
-	 * @param myNodeAccount the account of the local node
+	 * @param myNodeAccount the local account used by {@code isForMe}; not automatically added to the active node list
 	 * @param maxNumberOfNodes the maximum number of active nodes
 	 * @param maxNodeAccountLength the maximum expected node account length
 	 * @param maxCachedVariableKeyLength the maximum variable-length key size to cache or pin
@@ -121,7 +125,7 @@ public class Balancer {
 	/**
 	 * Creates a balancer for the given local node account.
 	 *
-	 * @param myNodeAccount the account of the local node
+	 * @param myNodeAccount the local account used by {@code isForMe}; not automatically added to the active node list
 	 * @param maxNumberOfNodes the maximum number of active nodes
 	 * @param maxNodeAccountLength the maximum expected node account length
 	 * @param maxCachedVariableKeyLength the maximum variable-length key size to cache or pin
