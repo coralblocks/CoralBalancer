@@ -42,7 +42,8 @@ public class Balancer {
 
 	private static final int DEFAULT_MAX_NUMBER_OF_NODES = 256;
 	private static final int DEFAULT_MAX_NODE_ACCOUNT_LENGTH = 64;
-	private static final int DEFAULT_CACHE_INITIAL_CAPACITY = 1024 * 8;
+	private static final int DEFAULT_CACHE_INITIAL_CAPACITY = 256;
+	private static final boolean DEFAULT_IS_DIRECT_BYTE_BUFFER = false;
 	private static final short MAX_CACHED_VARIABLE_KEY_LENGTH = 128;
 
 	private final CharSequence[] nodes;
@@ -53,6 +54,7 @@ public class Balancer {
 	
 	private final int initialCacheCapacity;
 	private final short maxCachedVariableKeyLength;
+	private final boolean isDirectByteBuffer;
 	private final CharArrayView charArrayView;
 	private final StringBuilder unpinnedNodeAccount;
 	
@@ -129,9 +131,27 @@ public class Balancer {
 	 * @param maxNumberOfNodes the maximum number of active nodes
 	 * @param maxNodeAccountLength the maximum expected node account length
 	 * @param maxCachedVariableKeyLength the maximum variable-length key size to cache or pin
-	 * @param initialCacheCapacity the initial capacity for owner caches and pin maps
+	 * @param initialCacheCapacity the initial capacity for owner caches and pin maps; use a sufficiently
+	 *                              large value to avoid growth allocations
 	 */
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength, short maxCachedVariableKeyLength, int initialCacheCapacity) {
+		this(myNodeAccount, maxNumberOfNodes, maxNodeAccountLength, maxCachedVariableKeyLength,
+				initialCacheCapacity, DEFAULT_IS_DIRECT_BYTE_BUFFER);
+	}
+
+	/**
+	 * Creates a balancer for the given local node account.
+	 *
+	 * @param myNodeAccount the local account used by {@code isForMe}; not automatically added to the active node list
+	 * @param maxNumberOfNodes the maximum number of active nodes
+	 * @param maxNodeAccountLength the maximum expected node account length
+	 * @param maxCachedVariableKeyLength the maximum variable-length key size to cache or pin
+	 * @param initialCacheCapacity the initial capacity for owner caches and pin maps; use a sufficiently
+	 *                              large value to avoid growth allocations
+	 * @param isDirectByteBuffer whether byte-sequence cache and pin keys use direct buffers
+	 */
+	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength,
+			short maxCachedVariableKeyLength, int initialCacheCapacity, boolean isDirectByteBuffer) {
 		this.nodes = new CharSequence[maxNumberOfNodes];
 		this.nodeHashes = new long[maxNumberOfNodes];
 		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {
@@ -149,6 +169,7 @@ public class Balancer {
 		
 		this.initialCacheCapacity = initialCacheCapacity;
 		this.maxCachedVariableKeyLength = maxCachedVariableKeyLength;
+		this.isDirectByteBuffer = isDirectByteBuffer;
 		
 		this.charArrayView = new CharArrayView();
 		this.unpinnedNodeAccount = new StringBuilder(maxNodeAccountLength);
@@ -1067,7 +1088,8 @@ public class Balancer {
 
 	private ByteBufferMap<CharSequence> getByteSequenceOwnerCache() {
 		if (byteSequenceOwnerCache == null) {
-			byteSequenceOwnerCache = new ByteBufferMap<CharSequence>(initialCacheCapacity, maxCachedVariableKeyLength);
+			byteSequenceOwnerCache = new ByteBufferMap<CharSequence>(
+					initialCacheCapacity, maxCachedVariableKeyLength, isDirectByteBuffer);
 		}
 		return byteSequenceOwnerCache;
 	}
@@ -1144,7 +1166,8 @@ public class Balancer {
 
 	private ByteBufferMap<CharSequence> getByteSequenceOwnerPins() {
 		if (byteSequenceOwnerPins == null) {
-			byteSequenceOwnerPins = new ByteBufferMap<CharSequence>(initialCacheCapacity, maxCachedVariableKeyLength);
+			byteSequenceOwnerPins = new ByteBufferMap<CharSequence>(
+					initialCacheCapacity, maxCachedVariableKeyLength, isDirectByteBuffer);
 		}
 		return byteSequenceOwnerPins;
 	}

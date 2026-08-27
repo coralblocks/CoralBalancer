@@ -24,6 +24,9 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.coralblocks.coralds.map.ByteBufferMap;
+import com.coralblocks.coralds.map.CharSequenceMap;
+
 
 public class BalancerTest {
 
@@ -334,6 +337,49 @@ public class BalancerTest {
 
 		Assert.assertNotNull(getField(b, "charSequenceOwnerCache"));
 		Assert.assertNull(getField(b, "byteSequenceOwnerCache"));
+	}
+
+	@Test
+	public void testDefaultCachesUseSmallCapacityAndHeapBuffers() throws Exception {
+
+		Balancer b = new Balancer("NODE1");
+		b.addNode("NODE1");
+
+		b.ownerFor("KEY");
+		CharSequenceMap<?> charSequenceCache =
+				(CharSequenceMap<?>) getField(b, "charSequenceOwnerCache");
+		Assert.assertEquals(256, charSequenceCache.getInitialCapacity());
+
+		b.ownerFor(new byte[] { 1 });
+		ByteBufferMap<?> byteSequenceCache =
+				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerCache");
+		Assert.assertEquals(256, byteSequenceCache.getInitialCapacity());
+		Assert.assertFalse(byteSequenceCache.isDirectBuffer());
+
+		Assert.assertTrue(b.pin(new byte[] { 2 }, "NODE1"));
+		ByteBufferMap<?> byteSequencePins =
+				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerPins");
+		Assert.assertEquals(256, byteSequencePins.getInitialCapacity());
+		Assert.assertFalse(byteSequencePins.isDirectBuffer());
+	}
+
+	@Test
+	public void testDirectByteBufferMapsCanBeEnabled() throws Exception {
+
+		Balancer b = new Balancer("NODE1", 4, 5, (short) 4, 2, true);
+		b.addNode("NODE1");
+
+		b.ownerFor(new byte[] { 1 });
+		ByteBufferMap<?> byteSequenceCache =
+				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerCache");
+		Assert.assertEquals(2, byteSequenceCache.getInitialCapacity());
+		Assert.assertTrue(byteSequenceCache.isDirectBuffer());
+
+		Assert.assertTrue(b.pin(new byte[] { 2 }, "NODE1"));
+		ByteBufferMap<?> byteSequencePins =
+				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerPins");
+		Assert.assertEquals(2, byteSequencePins.getInitialCapacity());
+		Assert.assertTrue(byteSequencePins.isDirectBuffer());
 	}
 
 	@Test
