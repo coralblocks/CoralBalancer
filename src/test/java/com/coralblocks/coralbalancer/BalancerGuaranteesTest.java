@@ -121,11 +121,7 @@ public class BalancerGuaranteesTest {
 	@Test
 	public void testSteadyStateOperationsDoNotAllocate() {
 
-		java.lang.management.ThreadMXBean standardThreadBean = ManagementFactory.getThreadMXBean();
-		Assume.assumeTrue(standardThreadBean instanceof com.sun.management.ThreadMXBean);
-		com.sun.management.ThreadMXBean threadBean = (com.sun.management.ThreadMXBean) standardThreadBean;
-		Assume.assumeTrue(threadBean.isThreadAllocatedMemorySupported());
-		threadBean.setThreadAllocatedMemoryEnabled(true);
+		com.sun.management.ThreadMXBean threadBean = allocationThreadBean();
 
 		Balancer b = new Balancer("NODE1");
 		b.addNode("NODE1");
@@ -174,6 +170,44 @@ public class BalancerGuaranteesTest {
 		Assert.assertEquals("Steady-state operations allocated bytes", 0L, allocatedBytes);
 	}
 
+	@Test
+	public void testNodeChangesDuringRegularUseDoNotAllocate() {
+
+		com.sun.management.ThreadMXBean threadBean = allocationThreadBean();
+		Balancer b = new Balancer("NODE1");
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+		b.addNode("NODE3");
+		b.addNode("NODE4");
+
+		CharSequence charSequenceKey = new StringBuilder("SYMBOL");
+		byte[] byteArrayKey = new byte[] { 1, 2, 3, 4 };
+		char[] charArrayKey = new char[] { 'S', 'Y', 'M', 'B', 'O', 'L' };
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(byteArrayKey);
+		StringBuilder uncachedCharSequenceKey = new StringBuilder(32);
+		byte[] uncachedByteArrayKey = new byte[8];
+
+		for (int i = 0; i < 20_000; i++) {
+			exerciseNodeChange(
+					b, charSequenceKey, byteArrayKey, charArrayKey, byteBufferKey,
+					uncachedCharSequenceKey, uncachedByteArrayKey, 10_000L + i);
+		}
+
+		int iterations = 100_000;
+		int checksum = 0;
+		long threadId = Thread.currentThread().getId();
+		long allocatedBefore = threadBean.getThreadAllocatedBytes(threadId);
+		for (int i = 0; i < iterations; i++) {
+			checksum += exerciseNodeChange(
+					b, charSequenceKey, byteArrayKey, charArrayKey, byteBufferKey,
+					uncachedCharSequenceKey, uncachedByteArrayKey, 100_000L + i);
+		}
+		long allocatedBytes = threadBean.getThreadAllocatedBytes(threadId) - allocatedBefore;
+
+		Assert.assertEquals(iterations * 32, checksum);
+		Assert.assertEquals("Node changes during regular use allocated bytes", 0L, allocatedBytes);
+	}
+
 	private static void assertClusterAgreement(Balancer[] balancers, int keyCount) {
 		for (long key = 0; key < keyCount; key++) {
 			CharSequence expectedOwner = balancers[0].ownerFor(key);
@@ -187,6 +221,32 @@ public class BalancerGuaranteesTest {
 	}
 
 	private static int exerciseSteadyStateOperations(Balancer b, CharSequence charSequenceKey,
+			byte[] byteArrayKey, char[] charArrayKey, ByteBuffer byteBufferKey,
+			StringBuilder uncachedCharSequenceKey, byte[] uncachedByteArrayKey, long uncachedLongKey) {
+		int checksum = exerciseOwnerLookups(
+				b, charSequenceKey, byteArrayKey, charArrayKey, byteBufferKey,
+				uncachedCharSequenceKey, uncachedByteArrayKey, uncachedLongKey);
+		b.pin("PIN", "NODE1");
+		if (b.unpin("PIN") != null) checksum++;
+		return checksum;
+	}
+
+	private static int exerciseNodeChange(Balancer b, CharSequence charSequenceKey,
+			byte[] byteArrayKey, char[] charArrayKey, ByteBuffer byteBufferKey,
+			StringBuilder uncachedCharSequenceKey, byte[] uncachedByteArrayKey, long uncachedLongKey) {
+		int checksum = 0;
+		if (b.removeNode("NODE4")) checksum++;
+		checksum += exerciseOwnerLookups(
+				b, charSequenceKey, byteArrayKey, charArrayKey, byteBufferKey,
+				uncachedCharSequenceKey, uncachedByteArrayKey, uncachedLongKey);
+		if (b.addNode("NODE4")) checksum++;
+		checksum += exerciseOwnerLookups(
+				b, charSequenceKey, byteArrayKey, charArrayKey, byteBufferKey,
+				uncachedCharSequenceKey, uncachedByteArrayKey, uncachedLongKey);
+		return checksum;
+	}
+
+	private static int exerciseOwnerLookups(Balancer b, CharSequence charSequenceKey,
 			byte[] byteArrayKey, char[] charArrayKey, ByteBuffer byteBufferKey,
 			StringBuilder uncachedCharSequenceKey, byte[] uncachedByteArrayKey, long uncachedLongKey) {
 		int checksum = 0;
@@ -207,9 +267,16 @@ public class BalancerGuaranteesTest {
 		if (b.ownerFor(uncachedCharSequenceKey) != null) checksum++;
 		setBinaryKey(uncachedByteArrayKey, uncachedLongKey);
 		if (b.ownerFor(uncachedByteArrayKey) != null) checksum++;
-		b.pin("PIN", "NODE1");
-		if (b.unpin("PIN") != null) checksum++;
 		return checksum;
+	}
+
+	private static com.sun.management.ThreadMXBean allocationThreadBean() {
+		java.lang.management.ThreadMXBean standardThreadBean = ManagementFactory.getThreadMXBean();
+		Assume.assumeTrue(standardThreadBean instanceof com.sun.management.ThreadMXBean);
+		com.sun.management.ThreadMXBean threadBean = (com.sun.management.ThreadMXBean) standardThreadBean;
+		Assume.assumeTrue(threadBean.isThreadAllocatedMemorySupported());
+		threadBean.setThreadAllocatedMemoryEnabled(true);
+		return threadBean;
 	}
 
 	private static void setTextKey(StringBuilder key, long value) {
