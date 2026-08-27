@@ -43,6 +43,9 @@ import com.coralblocks.coralpool.ObjectPool;
  *
  * <p>Primitive owner lookups share a cache, but primitive pins remain key-type-specific.</p>
  *
+ * <p>Equivalent {@code CharSequence} and {@code char[]} keys share caches and pins, as do
+ * equivalent {@code byte[]} and {@code ByteBuffer} keys.</p>
+ *
  * <p>All balancers in a distributed system must maintain the same active-node and pin state.</p>
  */
 public class Balancer {
@@ -69,12 +72,10 @@ public class Balancer {
 	private final StringBuilder unpinnedNodeAccount;
 	
 	private CharSequenceMap<CharSequence> charSequenceOwnerCache = null;
-	private CharSequenceMap<CharSequence> charArrayOwnerCache = null;
 	private ByteBufferMap<CharSequence> byteSequenceOwnerCache = null;
 	private LongMap<CharSequence> primitiveOwnerCache = null;
 
 	private CharSequenceMap<CharSequence> charSequenceOwnerPins = null;
-	private CharSequenceMap<CharSequence> charArrayOwnerPins = null;
 	private ByteBufferMap<CharSequence> byteSequenceOwnerPins = null;
 	private ByteMap<CharSequence> booleanOwnerPins = null;
 	private ByteMap<CharSequence> byteOwnerPins = null;
@@ -230,7 +231,8 @@ public class Balancer {
 		ensureKeyNotNull(key);
 		if (!canPinVariableKey(key.length)) return false;
 		charArrayView.wrap(key);
-		CharSequence oldNodeAccount = getCharArrayOwnerPins().put(charArrayView, getNodeAccountFromPool(nodeAccount));
+		CharSequence oldNodeAccount = getCharSequenceOwnerPins().put(
+				charArrayView, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
 		return true;
 	}
@@ -395,9 +397,9 @@ public class Balancer {
 	public CharSequence unpin(char[] key) {
 		ensureKeyNotNull(key);
 		if (key.length > MAX_CACHED_VARIABLE_KEY_LENGTH) return copyAndReleaseUnpinnedNodeAccount(null);
-		if (charArrayOwnerPins == null) return copyAndReleaseUnpinnedNodeAccount(null);
+		if (charSequenceOwnerPins == null) return copyAndReleaseUnpinnedNodeAccount(null);
 		charArrayView.wrap(key);
-		CharSequence oldNodeAccount = charArrayOwnerPins.remove(charArrayView);
+		CharSequence oldNodeAccount = charSequenceOwnerPins.remove(charArrayView);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -526,7 +528,6 @@ public class Balancer {
 		ensureNodeAccountNotNull(nodeAccount);
 		int removed = 0;
 		removed += removePinsForNode(charSequenceOwnerPins, nodeAccount);
-		removed += removePinsForNode(charArrayOwnerPins, nodeAccount);
 		removed += removePinsForNode(byteSequenceOwnerPins, nodeAccount);
 		removed += removePinsForNode(booleanOwnerPins, nodeAccount);
 		removed += removePinsForNode(byteOwnerPins, nodeAccount);
@@ -604,10 +605,10 @@ public class Balancer {
 
 		charArrayView.wrap(key);
 
-		CharSequence owner = charArrayOwnerPins == null ? null : charArrayOwnerPins.get(charArrayView);
+		CharSequence owner = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.get(charArrayView);
 		if (owner != null) return owner;
 
-		CharSequenceMap<CharSequence> cache = getCharArrayOwnerCache();
+		CharSequenceMap<CharSequence> cache = getCharSequenceOwnerCache();
 		owner = cache.get(charArrayView);
 		if (owner != null) return owner;
 
@@ -949,7 +950,6 @@ public class Balancer {
 
 	private void clearCaches() {
 		if (charSequenceOwnerCache != null) charSequenceOwnerCache.clear();
-		if (charArrayOwnerCache != null) charArrayOwnerCache.clear();
 		if (byteSequenceOwnerCache != null) byteSequenceOwnerCache.clear();
 		if (primitiveOwnerCache != null) primitiveOwnerCache.clear();
 	}
@@ -960,14 +960,6 @@ public class Balancer {
 					OWNER_CACHE_CAPACITY, MAX_CACHED_VARIABLE_KEY_LENGTH, OWNER_CACHE_LOAD_FACTOR);
 		}
 		return charSequenceOwnerCache;
-	}
-
-	private CharSequenceMap<CharSequence> getCharArrayOwnerCache() {
-		if (charArrayOwnerCache == null) {
-			charArrayOwnerCache = new CharSequenceMap<CharSequence>(
-					OWNER_CACHE_CAPACITY, MAX_CACHED_VARIABLE_KEY_LENGTH, OWNER_CACHE_LOAD_FACTOR);
-		}
-		return charArrayOwnerCache;
 	}
 
 	private ByteBufferMap<CharSequence> getByteSequenceOwnerCache() {
@@ -992,14 +984,6 @@ public class Balancer {
 					PIN_MAP_INITIAL_CAPACITY, MAX_CACHED_VARIABLE_KEY_LENGTH);
 		}
 		return charSequenceOwnerPins;
-	}
-
-	private CharSequenceMap<CharSequence> getCharArrayOwnerPins() {
-		if (charArrayOwnerPins == null) {
-			charArrayOwnerPins = new CharSequenceMap<CharSequence>(
-					PIN_MAP_INITIAL_CAPACITY, MAX_CACHED_VARIABLE_KEY_LENGTH);
-		}
-		return charArrayOwnerPins;
 	}
 
 	private ByteBufferMap<CharSequence> getByteSequenceOwnerPins() {

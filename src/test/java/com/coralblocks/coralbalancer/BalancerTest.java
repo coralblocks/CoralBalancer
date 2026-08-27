@@ -279,11 +279,9 @@ public class BalancerTest {
 		Balancer b = new Balancer("NODE1");
 
 		Assert.assertNull(getField(b, "charSequenceOwnerCache"));
-		Assert.assertNull(getField(b, "charArrayOwnerCache"));
 		Assert.assertNull(getField(b, "byteSequenceOwnerCache"));
 		Assert.assertNull(getField(b, "primitiveOwnerCache"));
 		Assert.assertNull(getField(b, "charSequenceOwnerPins"));
-		Assert.assertNull(getField(b, "charArrayOwnerPins"));
 		Assert.assertNull(getField(b, "byteSequenceOwnerPins"));
 		Assert.assertNull(getField(b, "booleanOwnerPins"));
 		Assert.assertNull(getField(b, "byteOwnerPins"));
@@ -367,9 +365,32 @@ public class BalancerTest {
 		}
 
 		Assert.assertEquals(256, getMapSize(b, "charSequenceOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "charArrayOwnerCache"));
 		Assert.assertEquals(256, getMapSize(b, "byteSequenceOwnerCache"));
 		Assert.assertEquals(256, getMapSize(b, "primitiveOwnerCache"));
+	}
+
+	@Test
+	public void testEquivalentTextKeysShareOwnerCacheAndPins() throws Exception {
+
+		Balancer b = new Balancer("NODE1");
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+
+		CharSequence charSequenceKey = "ABC";
+		char[] charArrayKey = new char[] { 'A', 'B', 'C' };
+		String expectedOwner = b.ownerFor(charSequenceKey).toString();
+
+		Assert.assertEquals(expectedOwner, b.ownerFor(charArrayKey).toString());
+		Assert.assertEquals(1, getMapSize(b, "charSequenceOwnerCache"));
+
+		Assert.assertTrue(b.pin(charSequenceKey, "PIN_NODE1"));
+		Assert.assertEquals("PIN_NODE1", b.ownerFor(charArrayKey).toString());
+
+		Assert.assertTrue(b.pin(charArrayKey, "PIN_NODE2"));
+		Assert.assertEquals("PIN_NODE2", b.ownerFor(charSequenceKey).toString());
+		Assert.assertEquals("PIN_NODE2", b.unpin(charSequenceKey).toString());
+		Assert.assertNull(b.unpin(charArrayKey));
+		Assert.assertEquals(expectedOwner, b.ownerFor(charArrayKey).toString());
 	}
 
 	@Test
