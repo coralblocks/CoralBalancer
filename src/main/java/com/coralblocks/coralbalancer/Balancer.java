@@ -41,6 +41,8 @@ import com.coralblocks.coralpool.ObjectPool;
  * <p>Owner caching is intended for bounded key spaces. Each owner cache retains at most
  * 256 entries. Once full, new keys are balanced without being cached.</p>
  *
+ * <p>Primitive owner lookups share a cache, but primitive pins remain key-type-specific.</p>
+ *
  * <p>All balancers in a distributed system must maintain the same active-node and pin state.</p>
  */
 public class Balancer {
@@ -69,14 +71,7 @@ public class Balancer {
 	private CharSequenceMap<CharSequence> charSequenceOwnerCache = null;
 	private CharSequenceMap<CharSequence> charArrayOwnerCache = null;
 	private ByteBufferMap<CharSequence> byteSequenceOwnerCache = null;
-	private ByteMap<CharSequence> booleanOwnerCache = null;
-	private ByteMap<CharSequence> byteOwnerCache = null;
-	private IntMap<CharSequence> charOwnerCache = null;
-	private IntMap<CharSequence> shortOwnerCache = null;
-	private IntMap<CharSequence> intOwnerCache = null;
-	private LongMap<CharSequence> longOwnerCache = null;
-	private IntMap<CharSequence> floatOwnerCache = null;
-	private LongMap<CharSequence> doubleOwnerCache = null;
+	private LongMap<CharSequence> primitiveOwnerCache = null;
 
 	private CharSequenceMap<CharSequence> charSequenceOwnerPins = null;
 	private CharSequenceMap<CharSequence> charArrayOwnerPins = null;
@@ -659,14 +654,7 @@ public class Balancer {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
 		CharSequence owner = booleanOwnerPins == null ? null : booleanOwnerPins.get(cacheKey);
 		if (owner != null) return owner;
-
-		ByteMap<CharSequence> cache = getBooleanOwnerCache();
-		owner = cache.get(cacheKey);
-		if (owner != null) return owner;
-
-		owner = ownerForHash(RendezvousHashing.hashKey(key));
-		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(cacheKey, owner);
-		return owner;
+		return ownerForPrimitive(cacheKey);
 	}
 
 	/**
@@ -681,14 +669,7 @@ public class Balancer {
 	public CharSequence ownerFor(byte key) {
 		CharSequence owner = byteOwnerPins == null ? null : byteOwnerPins.get(key);
 		if (owner != null) return owner;
-
-		ByteMap<CharSequence> cache = getByteOwnerCache();
-		owner = cache.get(key);
-		if (owner != null) return owner;
-
-		owner = ownerForHash(RendezvousHashing.hashKey(key));
-		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(key, owner);
-		return owner;
+		return ownerForPrimitive(key);
 	}
 
 	/**
@@ -703,14 +684,7 @@ public class Balancer {
 	public CharSequence ownerFor(char key) {
 		CharSequence owner = charOwnerPins == null ? null : charOwnerPins.get(key);
 		if (owner != null) return owner;
-
-		IntMap<CharSequence> cache = getCharOwnerCache();
-		owner = cache.get(key);
-		if (owner != null) return owner;
-
-		owner = ownerForHash(RendezvousHashing.hashKey(key));
-		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(key, owner);
-		return owner;
+		return ownerForPrimitive(key);
 	}
 
 	/**
@@ -725,14 +699,7 @@ public class Balancer {
 	public CharSequence ownerFor(short key) {
 		CharSequence owner = shortOwnerPins == null ? null : shortOwnerPins.get(key);
 		if (owner != null) return owner;
-
-		IntMap<CharSequence> cache = getShortOwnerCache();
-		owner = cache.get(key);
-		if (owner != null) return owner;
-
-		owner = ownerForHash(RendezvousHashing.hashKey(key));
-		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(key, owner);
-		return owner;
+		return ownerForPrimitive(key);
 	}
 
 	/**
@@ -747,14 +714,7 @@ public class Balancer {
 	public CharSequence ownerFor(int key) {
 		CharSequence owner = intOwnerPins == null ? null : intOwnerPins.get(key);
 		if (owner != null) return owner;
-
-		IntMap<CharSequence> cache = getIntOwnerCache();
-		owner = cache.get(key);
-		if (owner != null) return owner;
-
-		owner = ownerForHash(RendezvousHashing.hashKey(key));
-		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(key, owner);
-		return owner;
+		return ownerForPrimitive(key);
 	}
 
 	/**
@@ -769,14 +729,7 @@ public class Balancer {
 	public CharSequence ownerFor(long key) {
 		CharSequence owner = longOwnerPins == null ? null : longOwnerPins.get(key);
 		if (owner != null) return owner;
-
-		LongMap<CharSequence> cache = getLongOwnerCache();
-		owner = cache.get(key);
-		if (owner != null) return owner;
-
-		owner = ownerForHash(RendezvousHashing.hashKey(key));
-		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(key, owner);
-		return owner;
+		return ownerForPrimitive(key);
 	}
 
 	/**
@@ -792,14 +745,7 @@ public class Balancer {
 		int cacheKey = Float.floatToIntBits(key);
 		CharSequence owner = floatOwnerPins == null ? null : floatOwnerPins.get(cacheKey);
 		if (owner != null) return owner;
-
-		IntMap<CharSequence> cache = getFloatOwnerCache();
-		owner = cache.get(cacheKey);
-		if (owner != null) return owner;
-
-		owner = ownerForHash(RendezvousHashing.hashKey(key));
-		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(cacheKey, owner);
-		return owner;
+		return ownerForPrimitive(cacheKey);
 	}
 
 	/**
@@ -815,14 +761,7 @@ public class Balancer {
 		long cacheKey = Double.doubleToLongBits(key);
 		CharSequence owner = doubleOwnerPins == null ? null : doubleOwnerPins.get(cacheKey);
 		if (owner != null) return owner;
-
-		LongMap<CharSequence> cache = getDoubleOwnerCache();
-		owner = cache.get(cacheKey);
-		if (owner != null) return owner;
-
-		owner = ownerForHash(RendezvousHashing.hashKey(key));
-		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(cacheKey, owner);
-		return owner;
+		return ownerForPrimitive(cacheKey);
 	}
 
 	/**
@@ -975,6 +914,16 @@ public class Balancer {
 		return RendezvousHashing.ownerForHash(keyHash, nodes, nodeHashes, nodeCount);
 	}
 
+	private CharSequence ownerForPrimitive(long key) {
+		LongMap<CharSequence> cache = getPrimitiveOwnerCache();
+		CharSequence owner = cache.get(key);
+		if (owner != null) return owner;
+
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
+		if (cache.size() < OWNER_CACHE_CAPACITY) cache.put(key, owner);
+		return owner;
+	}
+
 	private CharSequence copyAndReleaseUnpinnedNodeAccount(CharSequence oldNodeAccount) {
 		unpinnedNodeAccount.setLength(0);
 		if (oldNodeAccount == null) return null;
@@ -1002,14 +951,7 @@ public class Balancer {
 		if (charSequenceOwnerCache != null) charSequenceOwnerCache.clear();
 		if (charArrayOwnerCache != null) charArrayOwnerCache.clear();
 		if (byteSequenceOwnerCache != null) byteSequenceOwnerCache.clear();
-		if (booleanOwnerCache != null) booleanOwnerCache.clear();
-		if (byteOwnerCache != null) byteOwnerCache.clear();
-		if (charOwnerCache != null) charOwnerCache.clear();
-		if (shortOwnerCache != null) shortOwnerCache.clear();
-		if (intOwnerCache != null) intOwnerCache.clear();
-		if (longOwnerCache != null) longOwnerCache.clear();
-		if (floatOwnerCache != null) floatOwnerCache.clear();
-		if (doubleOwnerCache != null) doubleOwnerCache.clear();
+		if (primitiveOwnerCache != null) primitiveOwnerCache.clear();
 	}
 
 	private CharSequenceMap<CharSequence> getCharSequenceOwnerCache() {
@@ -1037,60 +979,11 @@ public class Balancer {
 		return byteSequenceOwnerCache;
 	}
 
-	private ByteMap<CharSequence> getBooleanOwnerCache() {
-		if (booleanOwnerCache == null) {
-			booleanOwnerCache = new ByteMap<CharSequence>();
+	private LongMap<CharSequence> getPrimitiveOwnerCache() {
+		if (primitiveOwnerCache == null) {
+			primitiveOwnerCache = new LongMap<CharSequence>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
 		}
-		return booleanOwnerCache;
-	}
-
-	private ByteMap<CharSequence> getByteOwnerCache() {
-		if (byteOwnerCache == null) {
-			byteOwnerCache = new ByteMap<CharSequence>();
-		}
-		return byteOwnerCache;
-	}
-
-	private IntMap<CharSequence> getCharOwnerCache() {
-		if (charOwnerCache == null) {
-			charOwnerCache = new IntMap<CharSequence>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
-		}
-		return charOwnerCache;
-	}
-
-	private IntMap<CharSequence> getShortOwnerCache() {
-		if (shortOwnerCache == null) {
-			shortOwnerCache = new IntMap<CharSequence>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
-		}
-		return shortOwnerCache;
-	}
-
-	private IntMap<CharSequence> getIntOwnerCache() {
-		if (intOwnerCache == null) {
-			intOwnerCache = new IntMap<CharSequence>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
-		}
-		return intOwnerCache;
-	}
-
-	private LongMap<CharSequence> getLongOwnerCache() {
-		if (longOwnerCache == null) {
-			longOwnerCache = new LongMap<CharSequence>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
-		}
-		return longOwnerCache;
-	}
-
-	private IntMap<CharSequence> getFloatOwnerCache() {
-		if (floatOwnerCache == null) {
-			floatOwnerCache = new IntMap<CharSequence>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
-		}
-		return floatOwnerCache;
-	}
-
-	private LongMap<CharSequence> getDoubleOwnerCache() {
-		if (doubleOwnerCache == null) {
-			doubleOwnerCache = new LongMap<CharSequence>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
-		}
-		return doubleOwnerCache;
+		return primitiveOwnerCache;
 	}
 
 	private CharSequenceMap<CharSequence> getCharSequenceOwnerPins() {

@@ -281,14 +281,7 @@ public class BalancerTest {
 		Assert.assertNull(getField(b, "charSequenceOwnerCache"));
 		Assert.assertNull(getField(b, "charArrayOwnerCache"));
 		Assert.assertNull(getField(b, "byteSequenceOwnerCache"));
-		Assert.assertNull(getField(b, "booleanOwnerCache"));
-		Assert.assertNull(getField(b, "byteOwnerCache"));
-		Assert.assertNull(getField(b, "charOwnerCache"));
-		Assert.assertNull(getField(b, "shortOwnerCache"));
-		Assert.assertNull(getField(b, "intOwnerCache"));
-		Assert.assertNull(getField(b, "longOwnerCache"));
-		Assert.assertNull(getField(b, "floatOwnerCache"));
-		Assert.assertNull(getField(b, "doubleOwnerCache"));
+		Assert.assertNull(getField(b, "primitiveOwnerCache"));
 		Assert.assertNull(getField(b, "charSequenceOwnerPins"));
 		Assert.assertNull(getField(b, "charArrayOwnerPins"));
 		Assert.assertNull(getField(b, "byteSequenceOwnerPins"));
@@ -304,17 +297,17 @@ public class BalancerTest {
 		b.addNode("NODE1");
 		b.addNode("NODE2");
 
-		Assert.assertNull(getField(b, "byteOwnerCache"));
+		Assert.assertNull(getField(b, "primitiveOwnerCache"));
 		Assert.assertNull(getField(b, "byteOwnerPins"));
 
 		Assert.assertTrue(b.pin((byte) 8, "NODE2"));
 
-		Assert.assertNull(getField(b, "byteOwnerCache"));
+		Assert.assertNull(getField(b, "primitiveOwnerCache"));
 		Assert.assertNotNull(getField(b, "byteOwnerPins"));
 
 		b.ownerFor((byte) 7);
 
-		Assert.assertNotNull(getField(b, "byteOwnerCache"));
+		Assert.assertNotNull(getField(b, "primitiveOwnerCache"));
 		Assert.assertNull(getField(b, "charSequenceOwnerCache"));
 
 		b.ownerFor("KEY");
@@ -376,14 +369,50 @@ public class BalancerTest {
 		Assert.assertEquals(256, getMapSize(b, "charSequenceOwnerCache"));
 		Assert.assertEquals(256, getMapSize(b, "charArrayOwnerCache"));
 		Assert.assertEquals(256, getMapSize(b, "byteSequenceOwnerCache"));
-		Assert.assertEquals(2, getMapSize(b, "booleanOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "byteOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "charOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "shortOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "intOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "longOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "floatOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "doubleOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "primitiveOwnerCache"));
+	}
+
+	@Test
+	public void testEquivalentPrimitiveKeysShareOwnerCacheEntry() throws Exception {
+
+		Balancer b = new Balancer("NODE1");
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+
+		CharSequence expectedOwner = b.ownerFor(1L);
+		Assert.assertSame(expectedOwner, b.ownerFor(true));
+		Assert.assertSame(expectedOwner, b.ownerFor((byte) 1));
+		Assert.assertSame(expectedOwner, b.ownerFor((char) 1));
+		Assert.assertSame(expectedOwner, b.ownerFor((short) 1));
+		Assert.assertSame(expectedOwner, b.ownerFor(1));
+		Assert.assertSame(expectedOwner, b.ownerFor(Float.intBitsToFloat(1)));
+		Assert.assertSame(expectedOwner, b.ownerFor(Double.longBitsToDouble(1L)));
+		Assert.assertEquals(1, getMapSize(b, "primitiveOwnerCache"));
+	}
+
+	@Test
+	public void testPrimitivePinsRemainTypeSpecific() {
+
+		Balancer b = new Balancer("NODE1");
+		b.addNode("NODE1");
+
+		Assert.assertTrue(b.pin(true, "BOOLEAN_NODE"));
+		Assert.assertTrue(b.pin((byte) 1, "BYTE_NODE"));
+		Assert.assertTrue(b.pin((char) 1, "CHAR_NODE"));
+		Assert.assertTrue(b.pin((short) 1, "SHORT_NODE"));
+		Assert.assertTrue(b.pin(1, "INT_NODE"));
+		Assert.assertTrue(b.pin(1L, "LONG_NODE"));
+		Assert.assertTrue(b.pin(Float.intBitsToFloat(1), "FLOAT_NODE"));
+		Assert.assertTrue(b.pin(Double.longBitsToDouble(1L), "DOUBLE_NODE"));
+
+		Assert.assertEquals("BOOLEAN_NODE", b.ownerFor(true).toString());
+		Assert.assertEquals("BYTE_NODE", b.ownerFor((byte) 1).toString());
+		Assert.assertEquals("CHAR_NODE", b.ownerFor((char) 1).toString());
+		Assert.assertEquals("SHORT_NODE", b.ownerFor((short) 1).toString());
+		Assert.assertEquals("INT_NODE", b.ownerFor(1).toString());
+		Assert.assertEquals("LONG_NODE", b.ownerFor(1L).toString());
+		Assert.assertEquals("FLOAT_NODE", b.ownerFor(Float.intBitsToFloat(1)).toString());
+		Assert.assertEquals("DOUBLE_NODE", b.ownerFor(Double.longBitsToDouble(1L)).toString());
 	}
 
 	@Test
