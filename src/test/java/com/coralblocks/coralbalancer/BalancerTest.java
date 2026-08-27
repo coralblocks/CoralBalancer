@@ -15,7 +15,6 @@
  */
 package com.coralblocks.coralbalancer;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -23,10 +22,6 @@ import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.coralblocks.coralds.map.ByteBufferMap;
-import com.coralblocks.coralds.map.CharSequenceMap;
-
 
 public class BalancerTest {
 
@@ -213,7 +208,7 @@ public class BalancerTest {
 	}
 
 	@Test
-	public void testOwnerForClearsAllCachesWhenNodesChange() throws Exception {
+	public void testOwnerForClearsAllCachesWhenNodesChange() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2");
 		Balancer b = new Balancer("NODE1");
@@ -222,24 +217,19 @@ public class BalancerTest {
 			b.addNode(activeNodes.get(i));
 		}
 
-		long keyForNode1 = keyFor("NODE1", activeNodes);
+		CharSequence charSequenceKey = charSequenceKeyFor("NODE1", activeNodes);
+		byte[] byteArrayKey = byteArrayKeyFor("NODE1", activeNodes);
+		long primitiveKey = keyFor("NODE1", activeNodes);
 
-		Assert.assertEquals("NODE1", b.ownerFor(keyForNode1).toString());
-		Assert.assertEquals("NODE1", b.ownerFor(keyForNode1).toString());
-		b.ownerFor("TEXT_KEY");
-		b.ownerFor(new byte[] { 1, 2, 3 });
-
-		Assert.assertEquals(1, getMapSize(b, "charSequenceOwnerCache"));
-		Assert.assertEquals(1, getMapSize(b, "byteSequenceOwnerCache"));
-		Assert.assertEquals(1, getMapSize(b, "primitiveOwnerCache"));
+		Assert.assertEquals("NODE1", b.ownerFor(charSequenceKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(byteArrayKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(primitiveKey).toString());
 
 		Assert.assertTrue(b.removeNode("NODE1"));
-		Assert.assertEquals(0, getMapSize(b, "charSequenceOwnerCache"));
-		Assert.assertEquals(0, getMapSize(b, "byteSequenceOwnerCache"));
-		Assert.assertEquals(0, getMapSize(b, "primitiveOwnerCache"));
-
-		Assert.assertEquals("NODE2", b.ownerFor(keyForNode1).toString());
-		Assert.assertFalse(b.isForMe(keyForNode1));
+		Assert.assertEquals("NODE2", b.ownerFor(charSequenceKey).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(byteArrayKey).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(primitiveKey).toString());
+		Assert.assertFalse(b.isForMe(primitiveKey));
 	}
 
 	@Test
@@ -316,103 +306,7 @@ public class BalancerTest {
 	}
 
 	@Test
-	public void testCachesAreLazyLoaded() throws Exception {
-
-		Balancer b = new Balancer("NODE1");
-
-		Assert.assertNull(getField(b, "charSequenceOwnerCache"));
-		Assert.assertNull(getField(b, "byteSequenceOwnerCache"));
-		Assert.assertNull(getField(b, "primitiveOwnerCache"));
-		Assert.assertNull(getField(b, "charSequenceOwnerPins"));
-		Assert.assertNull(getField(b, "byteSequenceOwnerPins"));
-		Assert.assertNull(getField(b, "booleanOwnerPins"));
-		Assert.assertNull(getField(b, "byteOwnerPins"));
-		Assert.assertNull(getField(b, "charOwnerPins"));
-		Assert.assertNull(getField(b, "shortOwnerPins"));
-		Assert.assertNull(getField(b, "intOwnerPins"));
-		Assert.assertNull(getField(b, "longOwnerPins"));
-		Assert.assertNull(getField(b, "floatOwnerPins"));
-		Assert.assertNull(getField(b, "doubleOwnerPins"));
-
-		b.addNode("NODE1");
-		b.addNode("NODE2");
-
-		Assert.assertNull(getField(b, "primitiveOwnerCache"));
-		Assert.assertNull(getField(b, "byteOwnerPins"));
-
-		b.pin((byte) 8, "NODE2");
-
-		Assert.assertNull(getField(b, "primitiveOwnerCache"));
-		Assert.assertNotNull(getField(b, "byteOwnerPins"));
-
-		b.ownerFor((byte) 7);
-
-		Assert.assertNotNull(getField(b, "primitiveOwnerCache"));
-		Assert.assertNull(getField(b, "charSequenceOwnerCache"));
-
-		b.ownerFor("KEY");
-
-		Assert.assertNotNull(getField(b, "charSequenceOwnerCache"));
-		Assert.assertNull(getField(b, "byteSequenceOwnerCache"));
-	}
-
-	@Test
-	public void testCachesUseFixedCapacityAndHeapBuffers() throws Exception {
-
-		Balancer b = new Balancer("NODE1");
-		b.addNode("NODE1");
-
-		b.ownerFor("KEY");
-		CharSequenceMap<?> charSequenceCache =
-				(CharSequenceMap<?>) getField(b, "charSequenceOwnerCache");
-		Assert.assertEquals(256, charSequenceCache.getInitialCapacity());
-		Assert.assertEquals(1.0f, charSequenceCache.getLoadFactor(), 0.0f);
-
-		b.ownerFor(new byte[] { 1 });
-		ByteBufferMap<?> byteSequenceCache =
-				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerCache");
-		Assert.assertEquals(256, byteSequenceCache.getInitialCapacity());
-		Assert.assertEquals(1.0f, byteSequenceCache.getLoadFactor(), 0.0f);
-		Assert.assertFalse(byteSequenceCache.isDirectBuffer());
-
-		b.pin(new byte[] { 2 }, "NODE1");
-		ByteBufferMap<?> byteSequencePins =
-				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerPins");
-		Assert.assertEquals(256, byteSequencePins.getInitialCapacity());
-		Assert.assertFalse(byteSequencePins.isDirectBuffer());
-	}
-
-	@Test
-	public void testOwnerCachesStopAtFixedCapacity() throws Exception {
-
-		Balancer b = new Balancer("NODE1");
-		b.addNode("NODE1");
-
-		for (int i = 0; i <= 256; i++) {
-			b.ownerFor("CS" + i);
-			b.ownerFor(new byte[] { (byte) (i >>> 8), (byte) i });
-			b.ownerFor(Integer.toString(i).toCharArray());
-			b.ownerFor((char) i);
-			b.ownerFor((short) i);
-			b.ownerFor(i);
-			b.ownerFor((long) i);
-			b.ownerFor((float) i);
-			b.ownerFor((double) i);
-		}
-
-		b.ownerFor(true);
-		b.ownerFor(false);
-		for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
-			b.ownerFor((byte) i);
-		}
-
-		Assert.assertEquals(256, getMapSize(b, "charSequenceOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "byteSequenceOwnerCache"));
-		Assert.assertEquals(256, getMapSize(b, "primitiveOwnerCache"));
-	}
-
-	@Test
-	public void testEquivalentTextKeysShareOwnerCacheAndPins() throws Exception {
+	public void testEquivalentTextKeysShareOwnerAndPins() {
 
 		Balancer b = new Balancer("NODE1");
 		b.addNode("NODE1");
@@ -423,7 +317,6 @@ public class BalancerTest {
 		String expectedOwner = b.ownerFor(charSequenceKey).toString();
 
 		Assert.assertEquals(expectedOwner, b.ownerFor(charArrayKey).toString());
-		Assert.assertEquals(1, getMapSize(b, "charSequenceOwnerCache"));
 
 		b.pin(charSequenceKey, "PIN_NODE1");
 		Assert.assertEquals("PIN_NODE1", b.ownerFor(charArrayKey).toString());
@@ -436,7 +329,32 @@ public class BalancerTest {
 	}
 
 	@Test
-	public void testEquivalentPrimitiveKeysShareOwnerCacheEntry() throws Exception {
+	public void testEquivalentBinaryKeysSharePins() {
+
+		Balancer b = new Balancer("NODE1");
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+
+		byte[] byteArrayKey = new byte[] { 1, 2, 3, 4 };
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 1, 2, 3, 4, 9 });
+		byteBufferKey.position(1);
+		byteBufferKey.limit(5);
+
+		Assert.assertTrue(contentEquals(b.ownerFor(byteArrayKey), b.ownerFor(byteBufferKey)));
+
+		b.pin(byteArrayKey, "PIN_NODE1");
+		Assert.assertEquals("PIN_NODE1", b.ownerFor(byteBufferKey).toString());
+
+		b.pin(byteBufferKey, "PIN_NODE2");
+		Assert.assertEquals("PIN_NODE2", b.ownerFor(byteArrayKey).toString());
+		Assert.assertEquals("PIN_NODE2", b.unpin(byteArrayKey).toString());
+		Assert.assertNull(b.unpin(byteBufferKey));
+		Assert.assertEquals(1, byteBufferKey.position());
+		Assert.assertEquals(5, byteBufferKey.limit());
+	}
+
+	@Test
+	public void testEquivalentPrimitiveKeysShareOwner() {
 
 		Balancer b = new Balancer("NODE1");
 		b.addNode("NODE1");
@@ -450,7 +368,6 @@ public class BalancerTest {
 		Assert.assertSame(expectedOwner, b.ownerFor(1));
 		Assert.assertSame(expectedOwner, b.ownerFor(Float.intBitsToFloat(1)));
 		Assert.assertSame(expectedOwner, b.ownerFor(Double.longBitsToDouble(1L)));
-		Assert.assertEquals(1, getMapSize(b, "primitiveOwnerCache"));
 	}
 
 	@Test
@@ -498,31 +415,6 @@ public class BalancerTest {
 		b.unpin(key);
 		b.unpin(key);
 		Assert.assertEquals(rendezvousOwner.toString(), b.ownerFor(key).toString());
-	}
-
-	@Test
-	public void testPinUsesPooledNodeAccountsAndUnpinReleasesThem() throws Exception {
-
-		Balancer b = new Balancer("NODE1");
-		CharSequence key = "KEY1";
-
-		b.addNode("NODE1");
-		b.addNode("NODE2");
-
-		int poolSizeBeforePin = getStringBuilderPoolSize(b);
-
-		b.pin(key, "NODE2");
-		Assert.assertEquals(poolSizeBeforePin - 1, getStringBuilderPoolSize(b));
-		Assert.assertTrue(b.ownerFor(key) instanceof StringBuilder);
-		Assert.assertEquals("NODE2", b.ownerFor(key).toString());
-
-		b.pin(key, "NODE1");
-		Assert.assertEquals(poolSizeBeforePin - 1, getStringBuilderPoolSize(b));
-		Assert.assertEquals("NODE1", b.ownerFor(key).toString());
-
-		CharSequence unpinnedNodeAccount = b.unpin(key);
-		Assert.assertEquals("NODE1", unpinnedNodeAccount.toString());
-		Assert.assertEquals(poolSizeBeforePin, getStringBuilderPoolSize(b));
 	}
 
 	@Test
@@ -595,7 +487,7 @@ public class BalancerTest {
 	}
 
 	@Test
-	public void testRemovePinsForNodeDropsOnlyMatchingPins() throws Exception {
+	public void testRemovePinsForNodeDropsOnlyMatchingPins() {
 
 		Balancer b = new Balancer("NODE2");
 		b.addNode("NODE1");
@@ -605,8 +497,6 @@ public class BalancerTest {
 		byte[] byteArrayKey = new byte[] { 1, 2, 3 };
 		char[] charArrayKey = new char[] { 'C', 'H', 'A', 'R' };
 		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 4, 5, 6 });
-
-		int poolSizeBeforePins = getStringBuilderPoolSize(b);
 
 		b.pin(charSequenceKey, "NODE1");
 		b.pin(byteArrayKey, "NODE1");
@@ -638,6 +528,17 @@ public class BalancerTest {
 		Assert.assertTrue(b.removeNode("NODE1"));
 		Assert.assertFalse(b.hasNode("NODE1"));
 		Assert.assertEquals("NODE1", b.ownerFor(charSequenceKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(byteArrayKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(charArrayKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(byteBufferKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(true).toString());
+		Assert.assertEquals("NODE1", b.ownerFor((byte) 7).toString());
+		Assert.assertEquals("NODE1", b.ownerFor('A').toString());
+		Assert.assertEquals("NODE1", b.ownerFor((short) 123).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(456).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(123456789L).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(123.25f).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(456.75d).toString());
 		Assert.assertEquals(12, b.removePinsForNode("NODE1"));
 
 		Assert.assertEquals("NODE2", b.ownerFor(charSequenceKey).toString());
@@ -653,7 +554,6 @@ public class BalancerTest {
 		Assert.assertEquals("NODE2", b.ownerFor(123.25f).toString());
 		Assert.assertEquals("NODE2", b.ownerFor(456.75d).toString());
 		Assert.assertEquals("NODE2", b.ownerFor("KEEP").toString());
-		Assert.assertEquals(poolSizeBeforePins, getStringBuilderPoolSize(b));
 		Assert.assertEquals(0, b.removePinsForNode("NODE1"));
 
 		Assert.assertTrue(b.addNode("NODE3"));
@@ -781,6 +681,15 @@ public class BalancerTest {
 		}
 	}
 
+	private static boolean contentEquals(CharSequence a, CharSequence b) {
+		if (a == b) return true;
+		if (a == null || b == null || a.length() != b.length()) return false;
+		for (int i = 0; i < a.length(); i++) {
+			if (a.charAt(i) != b.charAt(i)) return false;
+		}
+		return true;
+	}
+
 	private static boolean isOwnerForMe(CharSequence owner, Balancer b) {
 		return b.getMyNodeAccount().contentEquals(owner);
 	}
@@ -793,23 +702,22 @@ public class BalancerTest {
 		throw new IllegalStateException("Could not find a different node for owner: " + owner);
 	}
 
-	private static Object getField(Object target, String fieldName) throws Exception {
-		Field field = target.getClass().getDeclaredField(fieldName);
-		field.setAccessible(true);
-		return field.get(target);
+	private static CharSequence charSequenceKeyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
+		for (int i = 0; i < 10_000; i++) {
+			String key = "KEY" + i;
+			CharSequence owner = RendezvousHashingTestSupport.ownerFor(key, activeNodes);
+			if (nodeAccount.toString().contentEquals(owner)) return key;
+		}
+		throw new IllegalStateException("Could not find a CharSequence key for node account: " + nodeAccount);
 	}
 
-	private static int getStringBuilderPoolSize(Balancer b) throws Exception {
-		Object pool = getField(b, "sbPool");
-		Method method = pool.getClass().getDeclaredMethod("getLinkedListSize");
-		method.setAccessible(true);
-		return ((Integer) method.invoke(pool)).intValue();
-	}
-
-	private static int getMapSize(Balancer b, String fieldName) throws Exception {
-		Object map = getField(b, fieldName);
-		Method method = map.getClass().getMethod("size");
-		return ((Integer) method.invoke(map)).intValue();
+	private static byte[] byteArrayKeyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
+		for (int i = 0; i < 10_000; i++) {
+			byte[] key = new byte[] { (byte) (i >>> 24), (byte) (i >>> 16), (byte) (i >>> 8), (byte) i };
+			CharSequence owner = RendezvousHashingTestSupport.ownerFor(key, activeNodes);
+			if (nodeAccount.toString().contentEquals(owner)) return key;
+		}
+		throw new IllegalStateException("Could not find a byte[] key for node account: " + nodeAccount);
 	}
 
 	private static long keyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
