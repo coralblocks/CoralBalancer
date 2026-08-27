@@ -114,6 +114,18 @@ public class BalancerTest {
 	}
 
 	@Test
+	public void testNullNodeAccountIsRejected() {
+		Balancer b = new Balancer("NODE1");
+
+		try {
+			b.addNode(null);
+			Assert.fail("Expected a null node account to be rejected");
+		} catch (IllegalArgumentException expected) {
+			Assert.assertEquals("The nodeAccount argument cannot be null!", expected.getMessage());
+		}
+	}
+
+	@Test
 	public void testRoutingConfigurationIsFixed() {
 		Assert.assertEquals(1, Balancer.class.getConstructors().length);
 		Assert.assertEquals(1, Balancer.class.getConstructors()[0].getParameterTypes().length);

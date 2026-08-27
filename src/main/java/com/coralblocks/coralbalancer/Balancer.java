@@ -143,9 +143,11 @@ public class Balancer {
 	 *
 	 * @param nodeAccount the node account to add
 	 * @return {@code true} if the node was added; {@code false} if it was already present
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 * @throws IllegalStateException if the maximum number of active nodes has been reached
 	 */
 	public boolean addNode(CharSequence nodeAccount) {
+		ensureNodeAccountNotNull(nodeAccount);
 		if (!contains(nodeAccount)) {
 			if (nodeCount == nodes.length) {
 				throw new IllegalStateException("Maximum number of active nodes reached: " + nodes.length);
@@ -887,10 +889,7 @@ public class Balancer {
 	private StringBuilder getFromPool(CharSequence cs) {
 		StringBuilder sb = sbPool.get();
 		sb.setLength(0);
-		final int len = cs.length();
-		for(int i = 0; i < len; i++) {
-			sb.append(cs.charAt(i));
-		}
+		sb.append(cs);
 		return sb;
 	}
 
