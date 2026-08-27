@@ -199,14 +199,14 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if either argument is {@code null}, or if the key is longer than
+	 *                                  {@link #MAX_CACHED_VARIABLE_KEY_LENGTH}
 	 */
-	public boolean pin(CharSequence key, CharSequence nodeAccount) {
+	public void pin(CharSequence key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
-		if (!canPinVariableKey(key.length())) return false;
+		ensurePinnableVariableKeyLength(key.length());
 		CharSequence oldNodeAccount = getCharSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -214,14 +214,14 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if either argument is {@code null}, or if the key is longer than
+	 *                                  {@link #MAX_CACHED_VARIABLE_KEY_LENGTH}
 	 */
-	public boolean pin(byte[] key, CharSequence nodeAccount) {
+	public void pin(byte[] key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
-		if (!canPinVariableKey(key.length)) return false;
+		ensurePinnableVariableKeyLength(key.length);
 		CharSequence oldNodeAccount = getByteSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -229,16 +229,16 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if either argument is {@code null}, or if the key is longer than
+	 *                                  {@link #MAX_CACHED_VARIABLE_KEY_LENGTH}
 	 */
-	public boolean pin(char[] key, CharSequence nodeAccount) {
+	public void pin(char[] key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
-		if (!canPinVariableKey(key.length)) return false;
+		ensurePinnableVariableKeyLength(key.length);
 		charArrayView.wrap(key);
 		CharSequence oldNodeAccount = getCharSequenceOwnerPins().put(
 				charArrayView, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -246,14 +246,14 @@ public class Balancer {
 	 *
 	 * @param key the key to pin, using bytes from position to limit
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if either argument is {@code null}, or if the key is longer than
+	 *                                  {@link #MAX_CACHED_VARIABLE_KEY_LENGTH}
 	 */
-	public boolean pin(ByteBuffer key, CharSequence nodeAccount) {
+	public void pin(ByteBuffer key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
-		if (!canPinVariableKey(key.remaining())) return false;
+		ensurePinnableVariableKeyLength(key.remaining());
 		CharSequence oldNodeAccount = getByteSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -261,13 +261,12 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
-	public boolean pin(boolean key, CharSequence nodeAccount) {
+	public void pin(boolean key, CharSequence nodeAccount) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
 		CharSequence oldNodeAccount = getBooleanOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -275,12 +274,11 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
-	public boolean pin(byte key, CharSequence nodeAccount) {
+	public void pin(byte key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getByteOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -288,12 +286,11 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
-	public boolean pin(char key, CharSequence nodeAccount) {
+	public void pin(char key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getCharOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -301,12 +298,11 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
-	public boolean pin(short key, CharSequence nodeAccount) {
+	public void pin(short key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getShortOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -314,12 +310,11 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
-	public boolean pin(int key, CharSequence nodeAccount) {
+	public void pin(int key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getIntOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -327,12 +322,11 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
-	public boolean pin(long key, CharSequence nodeAccount) {
+	public void pin(long key, CharSequence nodeAccount) {
 		CharSequence oldNodeAccount = getLongOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -340,13 +334,12 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
-	public boolean pin(float key, CharSequence nodeAccount) {
+	public void pin(float key, CharSequence nodeAccount) {
 		int cacheKey = Float.floatToIntBits(key);
 		CharSequence oldNodeAccount = getFloatOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -354,13 +347,12 @@ public class Balancer {
 	 *
 	 * @param key the key to pin
 	 * @param nodeAccount the node account that should own the key
-	 * @return {@code true} if the pin succeeds; {@code false} otherwise
+	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
-	public boolean pin(double key, CharSequence nodeAccount) {
+	public void pin(double key, CharSequence nodeAccount) {
 		long cacheKey = Double.doubleToLongBits(key);
 		CharSequence oldNodeAccount = getDoubleOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
 		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
-		return true;
 	}
 
 	/**
@@ -1059,8 +1051,11 @@ public class Balancer {
 		return getFromPool(nodeAccount);
 	}
 
-	private boolean canPinVariableKey(int len) {
-		return len <= MAX_CACHED_VARIABLE_KEY_LENGTH;
+	private static void ensurePinnableVariableKeyLength(int length) {
+		if (length > MAX_CACHED_VARIABLE_KEY_LENGTH) {
+			throw new IllegalArgumentException("The key length cannot exceed "
+					+ MAX_CACHED_VARIABLE_KEY_LENGTH + ": " + length);
+		}
 	}
 
 	private static void ensureNodeAccountNotNull(CharSequence nodeAccount) {

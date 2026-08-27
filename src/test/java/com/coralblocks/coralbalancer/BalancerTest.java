@@ -308,7 +308,7 @@ public class BalancerTest {
 		Assert.assertNull(getField(b, "primitiveOwnerCache"));
 		Assert.assertNull(getField(b, "byteOwnerPins"));
 
-		Assert.assertTrue(b.pin((byte) 8, "NODE2"));
+		b.pin((byte) 8, "NODE2");
 
 		Assert.assertNull(getField(b, "primitiveOwnerCache"));
 		Assert.assertNotNull(getField(b, "byteOwnerPins"));
@@ -343,7 +343,7 @@ public class BalancerTest {
 		Assert.assertEquals(1.0f, byteSequenceCache.getLoadFactor(), 0.0f);
 		Assert.assertFalse(byteSequenceCache.isDirectBuffer());
 
-		Assert.assertTrue(b.pin(new byte[] { 2 }, "NODE1"));
+		b.pin(new byte[] { 2 }, "NODE1");
 		ByteBufferMap<?> byteSequencePins =
 				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerPins");
 		Assert.assertEquals(256, byteSequencePins.getInitialCapacity());
@@ -393,10 +393,10 @@ public class BalancerTest {
 		Assert.assertEquals(expectedOwner, b.ownerFor(charArrayKey).toString());
 		Assert.assertEquals(1, getMapSize(b, "charSequenceOwnerCache"));
 
-		Assert.assertTrue(b.pin(charSequenceKey, "PIN_NODE1"));
+		b.pin(charSequenceKey, "PIN_NODE1");
 		Assert.assertEquals("PIN_NODE1", b.ownerFor(charArrayKey).toString());
 
-		Assert.assertTrue(b.pin(charArrayKey, "PIN_NODE2"));
+		b.pin(charArrayKey, "PIN_NODE2");
 		Assert.assertEquals("PIN_NODE2", b.ownerFor(charSequenceKey).toString());
 		Assert.assertEquals("PIN_NODE2", b.unpin(charSequenceKey).toString());
 		Assert.assertNull(b.unpin(charArrayKey));
@@ -427,14 +427,14 @@ public class BalancerTest {
 		Balancer b = new Balancer("NODE1");
 		b.addNode("NODE1");
 
-		Assert.assertTrue(b.pin(true, "BOOLEAN_NODE"));
-		Assert.assertTrue(b.pin((byte) 1, "BYTE_NODE"));
-		Assert.assertTrue(b.pin((char) 1, "CHAR_NODE"));
-		Assert.assertTrue(b.pin((short) 1, "SHORT_NODE"));
-		Assert.assertTrue(b.pin(1, "INT_NODE"));
-		Assert.assertTrue(b.pin(1L, "LONG_NODE"));
-		Assert.assertTrue(b.pin(Float.intBitsToFloat(1), "FLOAT_NODE"));
-		Assert.assertTrue(b.pin(Double.longBitsToDouble(1L), "DOUBLE_NODE"));
+		b.pin(true, "BOOLEAN_NODE");
+		b.pin((byte) 1, "BYTE_NODE");
+		b.pin((char) 1, "CHAR_NODE");
+		b.pin((short) 1, "SHORT_NODE");
+		b.pin(1, "INT_NODE");
+		b.pin(1L, "LONG_NODE");
+		b.pin(Float.intBitsToFloat(1), "FLOAT_NODE");
+		b.pin(Double.longBitsToDouble(1L), "DOUBLE_NODE");
 
 		Assert.assertEquals("BOOLEAN_NODE", b.ownerFor(true).toString());
 		Assert.assertEquals("BYTE_NODE", b.ownerFor((byte) 1).toString());
@@ -461,7 +461,7 @@ public class BalancerTest {
 		String pinnedOwner = differentNode(rendezvousOwner, activeNodes);
 
 		Assert.assertEquals(rendezvousOwner.toString(), b.ownerFor(key).toString());
-		Assert.assertTrue(b.pin(key, pinnedOwner));
+		b.pin(key, pinnedOwner);
 		Assert.assertEquals(pinnedOwner, b.ownerFor(key).toString());
 		b.unpin(key);
 		b.unpin(key);
@@ -479,12 +479,12 @@ public class BalancerTest {
 
 		int poolSizeBeforePin = getStringBuilderPoolSize(b);
 
-		Assert.assertTrue(b.pin(key, "NODE2"));
+		b.pin(key, "NODE2");
 		Assert.assertEquals(poolSizeBeforePin - 1, getStringBuilderPoolSize(b));
 		Assert.assertTrue(b.ownerFor(key) instanceof StringBuilder);
 		Assert.assertEquals("NODE2", b.ownerFor(key).toString());
 
-		Assert.assertTrue(b.pin(key, "NODE1"));
+		b.pin(key, "NODE1");
 		Assert.assertEquals(poolSizeBeforePin - 1, getStringBuilderPoolSize(b));
 		Assert.assertEquals("NODE1", b.ownerFor(key).toString());
 
@@ -503,40 +503,40 @@ public class BalancerTest {
 		b.addNode("NODE4");
 
 		CharSequence charSequenceKey = new StringBuilder("PIN1");
-		Assert.assertTrue(b.pin(charSequenceKey, "NODE2"));
+		b.pin(charSequenceKey, "NODE2");
 		Assert.assertEquals("NODE2", b.unpin(charSequenceKey).toString());
 
 		byte[] byteArrayKey = new byte[] { 1, 2, 3 };
-		Assert.assertTrue(b.pin(byteArrayKey, "NODE3"));
+		b.pin(byteArrayKey, "NODE3");
 		Assert.assertEquals("NODE3", b.unpin(byteArrayKey).toString());
 
 		char[] charArrayKey = new char[] { 'P', 'I', 'N' };
-		Assert.assertTrue(b.pin(charArrayKey, "NODE4"));
+		b.pin(charArrayKey, "NODE4");
 		Assert.assertEquals("NODE4", b.unpin(charArrayKey).toString());
 
 		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 4, 5, 6, 9 });
 		byteBufferKey.position(1);
 		byteBufferKey.limit(4);
-		Assert.assertTrue(b.pin(byteBufferKey, "NODE2"));
+		b.pin(byteBufferKey, "NODE2");
 		Assert.assertEquals("NODE2", b.unpin(byteBufferKey).toString());
 		Assert.assertEquals(1, byteBufferKey.position());
 		Assert.assertEquals(4, byteBufferKey.limit());
 
-		Assert.assertTrue(b.pin(true, "NODE3"));
+		b.pin(true, "NODE3");
 		Assert.assertEquals("NODE3", b.unpin(true).toString());
-		Assert.assertTrue(b.pin((byte) 7, "NODE4"));
+		b.pin((byte) 7, "NODE4");
 		Assert.assertEquals("NODE4", b.unpin((byte) 7).toString());
-		Assert.assertTrue(b.pin('A', "NODE2"));
+		b.pin('A', "NODE2");
 		Assert.assertEquals("NODE2", b.unpin('A').toString());
-		Assert.assertTrue(b.pin((short) 123, "NODE3"));
+		b.pin((short) 123, "NODE3");
 		Assert.assertEquals("NODE3", b.unpin((short) 123).toString());
-		Assert.assertTrue(b.pin(456, "NODE4"));
+		b.pin(456, "NODE4");
 		Assert.assertEquals("NODE4", b.unpin(456).toString());
-		Assert.assertTrue(b.pin(123456789L, "NODE2"));
+		b.pin(123456789L, "NODE2");
 		Assert.assertEquals("NODE2", b.unpin(123456789L).toString());
-		Assert.assertTrue(b.pin(123.25f, "NODE3"));
+		b.pin(123.25f, "NODE3");
 		Assert.assertEquals("NODE3", b.unpin(123.25f).toString());
-		Assert.assertTrue(b.pin(456.75d, "NODE4"));
+		b.pin(456.75d, "NODE4");
 		Assert.assertEquals("NODE4", b.unpin(456.75d).toString());
 	}
 
@@ -545,13 +545,13 @@ public class BalancerTest {
 
 		Balancer b = new Balancer("NODE1");
 
-		Assert.assertTrue(b.pin("KEY1", "NODE1"));
-		Assert.assertTrue(b.pin(true, "NODE2"));
+		b.pin("KEY1", "NODE1");
+		b.pin(true, "NODE2");
 
 		CharSequence firstResult = b.unpin("KEY1");
 		Assert.assertEquals("NODE1", firstResult.toString());
 
-		Assert.assertTrue(b.pin("KEY2", "A_DIFFERENT_NODE"));
+		b.pin("KEY2", "A_DIFFERENT_NODE");
 		Assert.assertEquals("NODE1", firstResult.toString());
 
 		CharSequence secondResult = b.unpin(true);
@@ -576,19 +576,19 @@ public class BalancerTest {
 
 		int poolSizeBeforePins = getStringBuilderPoolSize(b);
 
-		Assert.assertTrue(b.pin(charSequenceKey, "NODE1"));
-		Assert.assertTrue(b.pin(byteArrayKey, "NODE1"));
-		Assert.assertTrue(b.pin(charArrayKey, "NODE1"));
-		Assert.assertTrue(b.pin(byteBufferKey, "NODE1"));
-		Assert.assertTrue(b.pin(true, "NODE1"));
-		Assert.assertTrue(b.pin((byte) 7, "NODE1"));
-		Assert.assertTrue(b.pin('A', "NODE1"));
-		Assert.assertTrue(b.pin((short) 123, "NODE1"));
-		Assert.assertTrue(b.pin(456, "NODE1"));
-		Assert.assertTrue(b.pin(123456789L, "NODE1"));
-		Assert.assertTrue(b.pin(123.25f, "NODE1"));
-		Assert.assertTrue(b.pin(456.75d, "NODE1"));
-		Assert.assertTrue(b.pin("KEEP", "NODE2"));
+		b.pin(charSequenceKey, "NODE1");
+		b.pin(byteArrayKey, "NODE1");
+		b.pin(charArrayKey, "NODE1");
+		b.pin(byteBufferKey, "NODE1");
+		b.pin(true, "NODE1");
+		b.pin((byte) 7, "NODE1");
+		b.pin('A', "NODE1");
+		b.pin((short) 123, "NODE1");
+		b.pin(456, "NODE1");
+		b.pin(123456789L, "NODE1");
+		b.pin(123.25f, "NODE1");
+		b.pin(456.75d, "NODE1");
+		b.pin("KEEP", "NODE2");
 
 		Assert.assertEquals("NODE1", b.ownerFor(charSequenceKey).toString());
 		Assert.assertEquals("NODE1", b.ownerFor(byteArrayKey).toString());
@@ -640,40 +640,40 @@ public class BalancerTest {
 		b.addNode("NODE4");
 
 		CharSequence charSequenceKey = new StringBuilder("PIN1");
-		Assert.assertTrue(b.pin(charSequenceKey, "NODE2"));
+		b.pin(charSequenceKey, "NODE2");
 		Assert.assertEquals("NODE2", b.ownerFor(charSequenceKey).toString());
 
 		byte[] byteArrayKey = new byte[] { 1, 2, 3 };
-		Assert.assertTrue(b.pin(byteArrayKey, "NODE3"));
+		b.pin(byteArrayKey, "NODE3");
 		Assert.assertEquals("NODE3", b.ownerFor(byteArrayKey).toString());
 
 		char[] charArrayKey = new char[] { 'P', 'I', 'N' };
-		Assert.assertTrue(b.pin(charArrayKey, "NODE4"));
+		b.pin(charArrayKey, "NODE4");
 		Assert.assertEquals("NODE4", b.ownerFor(charArrayKey).toString());
 
 		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 4, 5, 6, 9 });
 		byteBufferKey.position(1);
 		byteBufferKey.limit(4);
-		Assert.assertTrue(b.pin(byteBufferKey, "NODE2"));
+		b.pin(byteBufferKey, "NODE2");
 		Assert.assertEquals("NODE2", b.ownerFor(byteBufferKey).toString());
 		Assert.assertEquals(1, byteBufferKey.position());
 		Assert.assertEquals(4, byteBufferKey.limit());
 
-		Assert.assertTrue(b.pin(true, "NODE3"));
+		b.pin(true, "NODE3");
 		Assert.assertEquals("NODE3", b.ownerFor(true).toString());
-		Assert.assertTrue(b.pin((byte) 7, "NODE4"));
+		b.pin((byte) 7, "NODE4");
 		Assert.assertEquals("NODE4", b.ownerFor((byte) 7).toString());
-		Assert.assertTrue(b.pin('A', "NODE2"));
+		b.pin('A', "NODE2");
 		Assert.assertEquals("NODE2", b.ownerFor('A').toString());
-		Assert.assertTrue(b.pin((short) 123, "NODE3"));
+		b.pin((short) 123, "NODE3");
 		Assert.assertEquals("NODE3", b.ownerFor((short) 123).toString());
-		Assert.assertTrue(b.pin(456, "NODE4"));
+		b.pin(456, "NODE4");
 		Assert.assertEquals("NODE4", b.ownerFor(456).toString());
-		Assert.assertTrue(b.pin(123456789L, "NODE2"));
+		b.pin(123456789L, "NODE2");
 		Assert.assertEquals("NODE2", b.ownerFor(123456789L).toString());
-		Assert.assertTrue(b.pin(123.25f, "NODE3"));
+		b.pin(123.25f, "NODE3");
 		Assert.assertEquals("NODE3", b.ownerFor(123.25f).toString());
-		Assert.assertTrue(b.pin(456.75d, "NODE4"));
+		b.pin(456.75d, "NODE4");
 		Assert.assertEquals("NODE4", b.ownerFor(456.75d).toString());
 	}
 
@@ -688,7 +688,7 @@ public class BalancerTest {
 		}
 
 		Assert.assertFalse(b.hasNode("PIN_ONLY_NODE"));
-		Assert.assertTrue(b.pin("GOOG", "PIN_ONLY_NODE"));
+		b.pin("GOOG", "PIN_ONLY_NODE");
 		Assert.assertEquals("PIN_ONLY_NODE", b.ownerFor("GOOG").toString());
 		Assert.assertTrue(b.isForMe("GOOG"));
 
@@ -698,14 +698,14 @@ public class BalancerTest {
 	}
 
 	@Test
-	public void testPinReturnsFalseForOversizedVariableKeys() {
+	public void testPinRejectsOversizedVariableKeys() {
 
 		Balancer b = new Balancer("NODE1");
 		StringBuilder maximumLengthKey = new StringBuilder(Balancer.MAX_CACHED_VARIABLE_KEY_LENGTH);
 		for (int i = 0; i < Balancer.MAX_CACHED_VARIABLE_KEY_LENGTH; i++) {
 			maximumLengthKey.append('P');
 		}
-		Assert.assertTrue(b.pin(maximumLengthKey, "NODE2"));
+		b.pin(maximumLengthKey, "NODE2");
 		Assert.assertEquals("NODE2", b.unpin(maximumLengthKey).toString());
 
 		int oversizedLength = Balancer.MAX_CACHED_VARIABLE_KEY_LENGTH + 1;
@@ -721,14 +721,23 @@ public class BalancerTest {
 
 		ByteBuffer byteBufferKey = ByteBuffer.wrap(byteArrayKey);
 
-		Assert.assertFalse(b.pin(charSequenceKey, "NODE2"));
-		Assert.assertFalse(b.pin(byteArrayKey, "NODE2"));
-		Assert.assertFalse(b.pin(charArrayKey, "NODE2"));
-		Assert.assertFalse(b.pin(byteBufferKey, "NODE2"));
-		b.unpin(charSequenceKey);
-		b.unpin(byteArrayKey);
-		b.unpin(charArrayKey);
-		b.unpin(byteBufferKey);
+		assertOversizedPinRejected(() -> b.pin(charSequenceKey, "NODE2"));
+		assertOversizedPinRejected(() -> b.pin(byteArrayKey, "NODE2"));
+		assertOversizedPinRejected(() -> b.pin(charArrayKey, "NODE2"));
+		assertOversizedPinRejected(() -> b.pin(byteBufferKey, "NODE2"));
+		Assert.assertNull(b.unpin(charSequenceKey));
+		Assert.assertNull(b.unpin(byteArrayKey));
+		Assert.assertNull(b.unpin(charArrayKey));
+		Assert.assertNull(b.unpin(byteBufferKey));
+	}
+
+	private static void assertOversizedPinRejected(Runnable pinAction) {
+		try {
+			pinAction.run();
+			Assert.fail("Expected an oversized key to be rejected");
+		} catch (IllegalArgumentException expected) {
+			Assert.assertEquals("The key length cannot exceed 128: 129", expected.getMessage());
+		}
 	}
 
 	private static boolean isOwnerForMe(CharSequence owner, Balancer b) {
