@@ -47,6 +47,13 @@ It is important to note that the target node does not even need to be in the act
 node to handle only explicitly pinned keys without ever receiving any keys through hashing. Adding or removing an active
 node does not affect pins.
 
+To remove a single pin, use `unpin`. It returns the node account that was previously pinned, or `null` if the key was not
+pinned. The returned `CharSequence` is reused and remains valid only until the next call to any `unpin` overload:
+
+```java
+CharSequence previousNode = balancer.unpin("MSFT");
+```
+
 To remove all pins pointing to a specific node, use `removePinsForNode`. The active node list is not affected, and each key whose pin is removed falls back to hashing.
 If the node is currently active, it remains eligible to receive keys through hashing. Otherwise, it receives no keys until it is pinned again or added to the active node list.
 

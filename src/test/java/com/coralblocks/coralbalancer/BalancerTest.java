@@ -342,8 +342,78 @@ public class BalancerTest {
 		Assert.assertEquals(poolSizeBeforePin - 1, getStringBuilderPoolSize(b));
 		Assert.assertEquals("NODE1", b.ownerFor(key).toString());
 
-		b.unpin(key);
+		CharSequence unpinnedNodeAccount = b.unpin(key);
+		Assert.assertEquals("NODE1", unpinnedNodeAccount.toString());
 		Assert.assertEquals(poolSizeBeforePin, getStringBuilderPoolSize(b));
+	}
+
+	@Test
+	public void testUnpinReturnsPreviousNodeForAllKeyTypes() {
+
+		Balancer b = new Balancer("NODE1", 64, 6);
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+		b.addNode("NODE3");
+		b.addNode("NODE4");
+
+		CharSequence charSequenceKey = new StringBuilder("PIN1");
+		Assert.assertTrue(b.pin(charSequenceKey, "NODE2"));
+		Assert.assertEquals("NODE2", b.unpin(charSequenceKey).toString());
+
+		byte[] byteArrayKey = new byte[] { 1, 2, 3 };
+		Assert.assertTrue(b.pin(byteArrayKey, "NODE3"));
+		Assert.assertEquals("NODE3", b.unpin(byteArrayKey).toString());
+
+		char[] charArrayKey = new char[] { 'P', 'I', 'N' };
+		Assert.assertTrue(b.pin(charArrayKey, "NODE4"));
+		Assert.assertEquals("NODE4", b.unpin(charArrayKey).toString());
+
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 4, 5, 6, 9 });
+		byteBufferKey.position(1);
+		byteBufferKey.limit(4);
+		Assert.assertTrue(b.pin(byteBufferKey, "NODE2"));
+		Assert.assertEquals("NODE2", b.unpin(byteBufferKey).toString());
+		Assert.assertEquals(1, byteBufferKey.position());
+		Assert.assertEquals(4, byteBufferKey.limit());
+
+		Assert.assertTrue(b.pin(true, "NODE3"));
+		Assert.assertEquals("NODE3", b.unpin(true).toString());
+		Assert.assertTrue(b.pin((byte) 7, "NODE4"));
+		Assert.assertEquals("NODE4", b.unpin((byte) 7).toString());
+		Assert.assertTrue(b.pin('A', "NODE2"));
+		Assert.assertEquals("NODE2", b.unpin('A').toString());
+		Assert.assertTrue(b.pin((short) 123, "NODE3"));
+		Assert.assertEquals("NODE3", b.unpin((short) 123).toString());
+		Assert.assertTrue(b.pin(456, "NODE4"));
+		Assert.assertEquals("NODE4", b.unpin(456).toString());
+		Assert.assertTrue(b.pin(123456789L, "NODE2"));
+		Assert.assertEquals("NODE2", b.unpin(123456789L).toString());
+		Assert.assertTrue(b.pin(123.25f, "NODE3"));
+		Assert.assertEquals("NODE3", b.unpin(123.25f).toString());
+		Assert.assertTrue(b.pin(456.75d, "NODE4"));
+		Assert.assertEquals("NODE4", b.unpin(456.75d).toString());
+	}
+
+	@Test
+	public void testUnpinReusesReturnedNodeAccount() {
+
+		Balancer b = new Balancer("NODE1", 64, 16);
+
+		Assert.assertTrue(b.pin("KEY1", "NODE1"));
+		Assert.assertTrue(b.pin(true, "NODE2"));
+
+		CharSequence firstResult = b.unpin("KEY1");
+		Assert.assertEquals("NODE1", firstResult.toString());
+
+		Assert.assertTrue(b.pin("KEY2", "A_DIFFERENT_NODE"));
+		Assert.assertEquals("NODE1", firstResult.toString());
+
+		CharSequence secondResult = b.unpin(true);
+		Assert.assertSame(firstResult, secondResult);
+		Assert.assertEquals("NODE2", firstResult.toString());
+
+		Assert.assertNull(b.unpin("MISSING"));
+		Assert.assertEquals(0, firstResult.length());
 	}
 
 	@Test
