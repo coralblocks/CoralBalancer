@@ -347,6 +347,74 @@ public class BalancerTest {
 	}
 
 	@Test
+	public void testRemovePinsForNodeDropsOnlyMatchingPins() throws Exception {
+
+		Balancer b = new Balancer("NODE2", 64, 6);
+		b.addNode("NODE1");
+		b.addNode("NODE2");
+
+		CharSequence charSequenceKey = "CHAR_SEQUENCE";
+		byte[] byteArrayKey = new byte[] { 1, 2, 3 };
+		char[] charArrayKey = new char[] { 'C', 'H', 'A', 'R' };
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 4, 5, 6 });
+
+		int poolSizeBeforePins = getStringBuilderPoolSize(b);
+
+		Assert.assertTrue(b.pin(charSequenceKey, "NODE1"));
+		Assert.assertTrue(b.pin(byteArrayKey, "NODE1"));
+		Assert.assertTrue(b.pin(charArrayKey, "NODE1"));
+		Assert.assertTrue(b.pin(byteBufferKey, "NODE1"));
+		Assert.assertTrue(b.pin(true, "NODE1"));
+		Assert.assertTrue(b.pin((byte) 7, "NODE1"));
+		Assert.assertTrue(b.pin('A', "NODE1"));
+		Assert.assertTrue(b.pin((short) 123, "NODE1"));
+		Assert.assertTrue(b.pin(456, "NODE1"));
+		Assert.assertTrue(b.pin(123456789L, "NODE1"));
+		Assert.assertTrue(b.pin(123.25f, "NODE1"));
+		Assert.assertTrue(b.pin(456.75d, "NODE1"));
+		Assert.assertTrue(b.pin("KEEP", "NODE2"));
+
+		Assert.assertEquals("NODE1", b.ownerFor(charSequenceKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(byteArrayKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(charArrayKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(byteBufferKey).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(true).toString());
+		Assert.assertEquals("NODE1", b.ownerFor((byte) 7).toString());
+		Assert.assertEquals("NODE1", b.ownerFor('A').toString());
+		Assert.assertEquals("NODE1", b.ownerFor((short) 123).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(456).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(123456789L).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(123.25f).toString());
+		Assert.assertEquals("NODE1", b.ownerFor(456.75d).toString());
+
+		Assert.assertTrue(b.removeNode("NODE1"));
+		Assert.assertFalse(b.hasNode("NODE1"));
+		Assert.assertEquals("NODE1", b.ownerFor(charSequenceKey).toString());
+		Assert.assertEquals(12, b.removePinsForNode("NODE1"));
+
+		Assert.assertEquals("NODE2", b.ownerFor(charSequenceKey).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(byteArrayKey).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(charArrayKey).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(byteBufferKey).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(true).toString());
+		Assert.assertEquals("NODE2", b.ownerFor((byte) 7).toString());
+		Assert.assertEquals("NODE2", b.ownerFor('A').toString());
+		Assert.assertEquals("NODE2", b.ownerFor((short) 123).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(456).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(123456789L).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(123.25f).toString());
+		Assert.assertEquals("NODE2", b.ownerFor(456.75d).toString());
+		Assert.assertEquals("NODE2", b.ownerFor("KEEP").toString());
+		Assert.assertEquals(poolSizeBeforePins, getStringBuilderPoolSize(b));
+		Assert.assertEquals(0, b.removePinsForNode("NODE1"));
+
+		Assert.assertTrue(b.addNode("NODE3"));
+		Assert.assertEquals("NODE3",
+				RendezvousHashing.ownerFor("KEEP", Arrays.<CharSequence>asList("NODE2", "NODE3")).toString());
+		Assert.assertEquals("NODE2", b.ownerFor("KEEP").toString());
+	}
+
+	@Test
 	public void testPinSupportsAllKeyTypes() {
 
 		Balancer b = new Balancer("NODE1", 64, 6);
@@ -391,6 +459,26 @@ public class BalancerTest {
 		Assert.assertEquals("NODE3", b.ownerFor(123.25f).toString());
 		Assert.assertTrue(b.pin(456.75d, "NODE4"));
 		Assert.assertEquals("NODE4", b.ownerFor(456.75d).toString());
+	}
+
+	@Test
+	public void testPinSupportsNodeOutsideActiveList() {
+
+		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2");
+		Balancer b = new Balancer("PIN_ONLY_NODE", 64, 13);
+
+		for (int i = 0; i < activeNodes.size(); i++) {
+			b.addNode(activeNodes.get(i));
+		}
+
+		Assert.assertFalse(b.hasNode("PIN_ONLY_NODE"));
+		Assert.assertTrue(b.pin("GOOG", "PIN_ONLY_NODE"));
+		Assert.assertEquals("PIN_ONLY_NODE", b.ownerFor("GOOG").toString());
+		Assert.assertTrue(b.isForMe("GOOG"));
+
+		CharSequence hashedOwner = b.ownerFor("AAPL");
+		Assert.assertTrue("NODE1".contentEquals(hashedOwner) || "NODE2".contentEquals(hashedOwner));
+		Assert.assertFalse(b.isForMe("AAPL"));
 	}
 
 	@Test

@@ -17,6 +17,7 @@ package com.coralblocks.coralbalancer;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import com.coralblocks.coralds.map.ByteBufferMap;
@@ -184,7 +185,7 @@ public class Balancer {
 	/**
 	 * Removes a node account from the active node list.
 	 *
-	 * <p>Owner caches are cleared when a node is removed.</p>
+	 * <p>Owner caches are cleared when a node is removed. Pins are not affected.</p>
 	 *
 	 * @param nodeAccount the node account to remove
 	 * @return {@code true} if the node was removed; {@code false} if it was not present
@@ -520,6 +521,31 @@ public class Balancer {
 		CharSequence oldNodeAccount = doubleOwnerPins == null ? null : doubleOwnerPins.remove(cacheKey);
 		if (oldNodeAccount == null) return;
 		sbPool.release((StringBuilder) oldNodeAccount);
+	}
+
+	/**
+	 * Removes all pins pointing at a node account.
+	 *
+	 * <p>The active node list is not affected. Keys whose pins are removed fall back to hashing.</p>
+	 *
+	 * @param nodeAccount the node account whose pins should be removed
+	 * @return the number of pins removed
+	 */
+	public int removePinsForNode(CharSequence nodeAccount) {
+		ensureNodeAccountNotNull(nodeAccount);
+		int removed = 0;
+		removed += removePinsForNode(charSequenceOwnerPins, nodeAccount);
+		removed += removePinsForNode(charArrayOwnerPins, nodeAccount);
+		removed += removePinsForNode(byteSequenceOwnerPins, nodeAccount);
+		removed += removePinsForNode(booleanOwnerPins, nodeAccount);
+		removed += removePinsForNode(byteOwnerPins, nodeAccount);
+		removed += removePinsForNode(charOwnerPins, nodeAccount);
+		removed += removePinsForNode(shortOwnerPins, nodeAccount);
+		removed += removePinsForNode(intOwnerPins, nodeAccount);
+		removed += removePinsForNode(longOwnerPins, nodeAccount);
+		removed += removePinsForNode(floatOwnerPins, nodeAccount);
+		removed += removePinsForNode(doubleOwnerPins, nodeAccount);
+		return removed;
 	}
 
 	/**
@@ -913,6 +939,21 @@ public class Balancer {
 		return contentEquals(owner, myNodeAccount);
 	}
 
+	private int removePinsForNode(Iterable<CharSequence> pins, CharSequence nodeAccount) {
+		if (pins == null) return 0;
+		int removed = 0;
+		Iterator<CharSequence> iter = pins.iterator();
+		while(iter.hasNext()) {
+			CharSequence pinnedNodeAccount = iter.next();
+			if (contentEquals(pinnedNodeAccount, nodeAccount)) {
+				iter.remove();
+				sbPool.release((StringBuilder) pinnedNodeAccount);
+				removed++;
+			}
+		}
+		return removed;
+	}
+
 	private void clearCaches() {
 		if (charSequenceOwnerCache != null) charSequenceOwnerCache.clear();
 		if (charArrayOwnerCache != null) charArrayOwnerCache.clear();
@@ -1082,14 +1123,18 @@ public class Balancer {
 	}
 
 	private CharSequence getNodeAccountFromPool(CharSequence nodeAccount) {
-		if (nodeAccount == null) {
-			throw new IllegalArgumentException("The nodeAccount argument cannot be null!");
-		}
+		ensureNodeAccountNotNull(nodeAccount);
 		return getFromPool(nodeAccount);
 	}
 
 	private boolean canPinVariableKey(int len) {
 		return len <= maxCachedVariableKeyLength;
+	}
+
+	private static void ensureNodeAccountNotNull(CharSequence nodeAccount) {
+		if (nodeAccount == null) {
+			throw new IllegalArgumentException("The nodeAccount argument cannot be null!");
+		}
 	}
 
 	private static void ensureKeyNotNull(Object key) {

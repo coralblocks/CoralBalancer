@@ -38,6 +38,18 @@ balancer.addNode("NODE2");
 balancer.addNode("NODE3");
 
 balancer.pin("MSFT", "NODE1");
+balancer.pin("AAPL", "NODE4");
 ```
 
 Pinning is useful when a key must be handled by a specific node while the rest of the keys remain balanced by hashing.
+
+It is important to note that the target node does not even need to be in the active node list to be pinned. This allows a
+node to handle only explicitly pinned keys without ever receiving any keys through hashing. Adding or removing an active
+node does not affect pins.
+
+To remove all pins pointing to a specific node, use `removePinsForNode`. The active node list is not affected, and each key whose pin is removed falls back to hashing.
+If the node is currently active, it remains eligible to receive keys through hashing. Otherwise, it receives no keys until it is pinned again or added to the active node list.
+
+```java
+int removedPins = balancer.removePinsForNode("NODE4");
+```
