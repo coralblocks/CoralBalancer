@@ -34,6 +34,9 @@ import com.coralblocks.coralpool.ObjectPool;
  * stream, all nodes should build the same active node list and then call
  * {@code isForMe(key)} to decide whether the local node should handle the key or not.</p>
  *
+ * <p><b>NOTE:</b> This class is designed for single-threaded use and is intentionally
+ * not thread-safe. An instance must not be accessed concurrently by multiple threads.</p>
+ *
  * <p>The local node account identifies the node used by {@code isForMe}; it is not
  * automatically added to the active node list. This allows a balancer to represent
  * a pin-only node that does not receive keys through hashing.</p>
