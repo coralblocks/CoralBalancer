@@ -29,13 +29,6 @@ final class RendezvousHashing {
     	
     }
     
-    private static void validateKey(Object key) {
-
-        if (key == null) {
-            throw new IllegalArgumentException("The key argument cannot be null!");
-        }
-    }
-
     static <T extends CharSequence> T ownerForHash(long keyHash, T[] activeNodes, long[] activeNodeHashes,
             int activeNodeCount) {
 
@@ -64,22 +57,18 @@ final class RendezvousHashing {
     }
 
     static long hashKey(CharSequence key) {
-        validateKey(key);
         return hash64(key);
     }
 
     static long hashKey(byte[] key) {
-        validateKey(key);
         return hash64(key);
     }
 
     static long hashKey(char[] key) {
-        validateKey(key);
         return hash64(key);
     }
 
     static long hashKey(ByteBuffer key) {
-        validateKey(key);
         return hash64(key);
     }
 

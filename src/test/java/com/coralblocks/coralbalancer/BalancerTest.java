@@ -136,6 +136,17 @@ public class BalancerTest {
 	}
 
 	@Test
+	public void testNullVariableKeysAreRejectedBeforeHashing() {
+		Balancer b = new Balancer("NODE1");
+		b.addNode("NODE1");
+
+		assertNullKeyRejected(() -> b.ownerFor((CharSequence) null));
+		assertNullKeyRejected(() -> b.ownerFor((byte[]) null));
+		assertNullKeyRejected(() -> b.ownerFor((char[]) null));
+		assertNullKeyRejected(() -> b.ownerFor((ByteBuffer) null));
+	}
+
+	@Test
 	public void testIsForMe() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
@@ -746,6 +757,15 @@ public class BalancerTest {
 			Assert.fail("Expected an oversized key to be rejected");
 		} catch (IllegalArgumentException expected) {
 			Assert.assertEquals("The key length cannot exceed 128: 129", expected.getMessage());
+		}
+	}
+
+	private static void assertNullKeyRejected(Runnable ownerLookup) {
+		try {
+			ownerLookup.run();
+			Assert.fail("Expected a null key to be rejected");
+		} catch (IllegalArgumentException expected) {
+			Assert.assertEquals("The key argument cannot be null!", expected.getMessage());
 		}
 	}
 
