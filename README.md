@@ -28,6 +28,12 @@ The keys are uniformly distributed across the nodes. For the balancer above cont
 - Key support for `CharSequence`, `byte[]`, `char[]`, `ByteBuffer`, and all Java primitives.
 - Pinning: force a specific key to a specific node and bypass hashing (good for testing).
 
+## Determinism
+
+All balancers in a distributed system must maintain the same active node list and pin state. The maximum number of active
+nodes and the maximum cached or pinned variable-key length are fixed by the library so one balancer cannot accept a
+routing change that another rejects because of different constructor settings. Owner-cache capacity and buffer storage are also fixed by the library.
+
 ## Pinning
 
 ```java

@@ -98,17 +98,30 @@ public class BalancerTest {
 	@Test
 	public void testMaximumNumberOfNodesIsEnforced() {
 
-		Balancer b = new Balancer("NODE1", 2);
+		Balancer b = new Balancer("NODE1");
 
-		Assert.assertTrue(b.addNode("NODE1"));
-		Assert.assertTrue(b.addNode("NODE2"));
+		for (int i = 0; i < Balancer.MAX_NUMBER_OF_NODES; i++) {
+			Assert.assertTrue(b.addNode("NODE" + i));
+		}
 
 		try {
-			b.addNode("NODE3");
-			Assert.fail("Expected addNode to reject a third active node");
+			b.addNode("OVERFLOW");
+			Assert.fail("Expected addNode to reject an active node beyond the fixed maximum");
 		} catch (IllegalStateException expected) {
-			Assert.assertEquals(2, b.getNumberOfNodes());
-			Assert.assertFalse(b.hasNode("NODE3"));
+			Assert.assertEquals(Balancer.MAX_NUMBER_OF_NODES, b.getNumberOfNodes());
+			Assert.assertFalse(b.hasNode("OVERFLOW"));
+		}
+	}
+
+	@Test
+	public void testRoutingConfigurationIsFixed() {
+		Assert.assertEquals(1, Balancer.class.getConstructors().length);
+		Assert.assertEquals(1, Balancer.class.getConstructors()[0].getParameterTypes().length);
+		Assert.assertEquals(CharSequence.class, Balancer.class.getConstructors()[0].getParameterTypes()[0]);
+		Assert.assertEquals(256, Balancer.MAX_NUMBER_OF_NODES);
+		Assert.assertEquals(128, Balancer.MAX_CACHED_VARIABLE_KEY_LENGTH);
+		for (Method method : Balancer.class.getDeclaredMethods()) {
+			Assert.assertFalse("withCacheCapacity".equals(method.getName()));
 		}
 	}
 
@@ -116,7 +129,7 @@ public class BalancerTest {
 	public void testIsForMe() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
-		Balancer b = new Balancer("NODE2", 64, 6);
+		Balancer b = new Balancer("NODE2");
 
 		for (int i = 0; i < activeNodes.size(); i++) {
 			b.addNode(activeNodes.get(i));
@@ -170,7 +183,7 @@ public class BalancerTest {
 	public void testOwnerForClearsCacheWhenNodesChange() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2");
-		Balancer b = new Balancer("NODE1", 64, 6);
+		Balancer b = new Balancer("NODE1");
 
 		for (int i = 0; i < activeNodes.size(); i++) {
 			b.addNode(activeNodes.get(i));
@@ -192,7 +205,7 @@ public class BalancerTest {
 
 		List<CharSequence> initialNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
 		List<CharSequence> remainingNodes = Arrays.asList("NODE1", "NODE3", "NODE4");
-		Balancer b = new Balancer("NODE1", 64, 6);
+		Balancer b = new Balancer("NODE1");
 
 		for (int i = 0; i < initialNodes.size(); i++) {
 			b.addNode(initialNodes.get(i));
@@ -210,7 +223,7 @@ public class BalancerTest {
 	public void testOwnerForDistinguishesCacheHashCollisions() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
-		Balancer b = new Balancer("NODE1", 64, 6);
+		Balancer b = new Balancer("NODE1");
 		CharSequence key1 = "Aa";
 		CharSequence key2 = "BB";
 
@@ -229,7 +242,7 @@ public class BalancerTest {
 	public void testLargeKeysAreAccepted() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
-		Balancer b = new Balancer("NODE2", 64, 6);
+		Balancer b = new Balancer("NODE2");
 		StringBuilder charSequenceKey = new StringBuilder(40_000);
 		byte[] byteArrayKey = new byte[40_000];
 		char[] charArrayKey = new char[40_000];
@@ -258,35 +271,6 @@ public class BalancerTest {
 				b.ownerFor(byteBufferKey).toString());
 		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(charSequenceKey, activeNodes), b),
 				b.isForMe(charSequenceKey));
-	}
-
-	@Test
-	public void testCustomMaxCachedVariableKeyLength() {
-
-		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
-		Balancer b = new Balancer("NODE2", 64, 6, (short) 3);
-
-		for (int i = 0; i < activeNodes.size(); i++) {
-			b.addNode(activeNodes.get(i));
-		}
-
-		CharSequence charSequenceKey = new StringBuilder("KEY1");
-		byte[] byteArrayKey = new byte[] { 1, 2, 3, 4 };
-		char[] charArrayKey = new char[] { 'K', 'E', 'Y', '1' };
-		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 1, 2, 3, 4, 9 });
-		byteBufferKey.position(1);
-		byteBufferKey.limit(5);
-
-		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(charSequenceKey, activeNodes).toString(),
-				b.ownerFor(charSequenceKey).toString());
-		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(byteArrayKey, activeNodes).toString(),
-				b.ownerFor(byteArrayKey).toString());
-		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(charArrayKey, activeNodes).toString(),
-				b.ownerFor(charArrayKey).toString());
-		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(byteBufferKey, activeNodes).toString(),
-				b.ownerFor(byteBufferKey).toString());
-		Assert.assertEquals(1, byteBufferKey.position());
-		Assert.assertEquals(5, byteBufferKey.limit());
 	}
 
 	@Test
@@ -340,7 +324,7 @@ public class BalancerTest {
 	}
 
 	@Test
-	public void testDefaultCachesUseSmallCapacityAndHeapBuffers() throws Exception {
+	public void testCachesUseFixedCapacityAndHeapBuffers() throws Exception {
 
 		Balancer b = new Balancer("NODE1");
 		b.addNode("NODE1");
@@ -349,11 +333,13 @@ public class BalancerTest {
 		CharSequenceMap<?> charSequenceCache =
 				(CharSequenceMap<?>) getField(b, "charSequenceOwnerCache");
 		Assert.assertEquals(256, charSequenceCache.getInitialCapacity());
+		Assert.assertEquals(1.0f, charSequenceCache.getLoadFactor(), 0.0f);
 
 		b.ownerFor(new byte[] { 1 });
 		ByteBufferMap<?> byteSequenceCache =
 				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerCache");
 		Assert.assertEquals(256, byteSequenceCache.getInitialCapacity());
+		Assert.assertEquals(1.0f, byteSequenceCache.getLoadFactor(), 0.0f);
 		Assert.assertFalse(byteSequenceCache.isDirectBuffer());
 
 		Assert.assertTrue(b.pin(new byte[] { 2 }, "NODE1"));
@@ -364,29 +350,47 @@ public class BalancerTest {
 	}
 
 	@Test
-	public void testDirectByteBufferMapsCanBeEnabled() throws Exception {
+	public void testOwnerCachesStopAtFixedCapacity() throws Exception {
 
-		Balancer b = new Balancer("NODE1", 4, 5, (short) 4, 2, true);
+		Balancer b = new Balancer("NODE1");
 		b.addNode("NODE1");
 
-		b.ownerFor(new byte[] { 1 });
-		ByteBufferMap<?> byteSequenceCache =
-				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerCache");
-		Assert.assertEquals(2, byteSequenceCache.getInitialCapacity());
-		Assert.assertTrue(byteSequenceCache.isDirectBuffer());
+		for (int i = 0; i <= 256; i++) {
+			b.ownerFor("CS" + i);
+			b.ownerFor(new byte[] { (byte) (i >>> 8), (byte) i });
+			b.ownerFor(Integer.toString(i).toCharArray());
+			b.ownerFor((char) i);
+			b.ownerFor((short) i);
+			b.ownerFor(i);
+			b.ownerFor((long) i);
+			b.ownerFor((float) i);
+			b.ownerFor((double) i);
+		}
 
-		Assert.assertTrue(b.pin(new byte[] { 2 }, "NODE1"));
-		ByteBufferMap<?> byteSequencePins =
-				(ByteBufferMap<?>) getField(b, "byteSequenceOwnerPins");
-		Assert.assertEquals(2, byteSequencePins.getInitialCapacity());
-		Assert.assertTrue(byteSequencePins.isDirectBuffer());
+		b.ownerFor(true);
+		b.ownerFor(false);
+		for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
+			b.ownerFor((byte) i);
+		}
+
+		Assert.assertEquals(256, getMapSize(b, "charSequenceOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "charArrayOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "byteSequenceOwnerCache"));
+		Assert.assertEquals(2, getMapSize(b, "booleanOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "byteOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "charOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "shortOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "intOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "longOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "floatOwnerCache"));
+		Assert.assertEquals(256, getMapSize(b, "doubleOwnerCache"));
 	}
 
 	@Test
 	public void testPinBypassesOwnerCacheAndUnpinFallsBack() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
-		Balancer b = new Balancer("NODE1", 64, 6);
+		Balancer b = new Balancer("NODE1");
 		CharSequence key = "KEY1";
 
 		for (int i = 0; i < activeNodes.size(); i++) {
@@ -407,7 +411,7 @@ public class BalancerTest {
 	@Test
 	public void testPinUsesPooledNodeAccountsAndUnpinReleasesThem() throws Exception {
 
-		Balancer b = new Balancer("NODE1", 64, 6);
+		Balancer b = new Balancer("NODE1");
 		CharSequence key = "KEY1";
 
 		b.addNode("NODE1");
@@ -432,7 +436,7 @@ public class BalancerTest {
 	@Test
 	public void testUnpinReturnsPreviousNodeForAllKeyTypes() {
 
-		Balancer b = new Balancer("NODE1", 64, 6);
+		Balancer b = new Balancer("NODE1");
 		b.addNode("NODE1");
 		b.addNode("NODE2");
 		b.addNode("NODE3");
@@ -479,7 +483,7 @@ public class BalancerTest {
 	@Test
 	public void testUnpinReusesReturnedNodeAccount() {
 
-		Balancer b = new Balancer("NODE1", 64, 16);
+		Balancer b = new Balancer("NODE1");
 
 		Assert.assertTrue(b.pin("KEY1", "NODE1"));
 		Assert.assertTrue(b.pin(true, "NODE2"));
@@ -501,7 +505,7 @@ public class BalancerTest {
 	@Test
 	public void testRemovePinsForNodeDropsOnlyMatchingPins() throws Exception {
 
-		Balancer b = new Balancer("NODE2", 64, 6);
+		Balancer b = new Balancer("NODE2");
 		b.addNode("NODE1");
 		b.addNode("NODE2");
 
@@ -569,7 +573,7 @@ public class BalancerTest {
 	@Test
 	public void testPinSupportsAllKeyTypes() {
 
-		Balancer b = new Balancer("NODE1", 64, 6);
+		Balancer b = new Balancer("NODE1");
 		b.addNode("NODE1");
 		b.addNode("NODE2");
 		b.addNode("NODE3");
@@ -617,7 +621,7 @@ public class BalancerTest {
 	public void testPinSupportsNodeOutsideActiveList() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2");
-		Balancer b = new Balancer("PIN_ONLY_NODE", 64, 13);
+		Balancer b = new Balancer("PIN_ONLY_NODE");
 
 		for (int i = 0; i < activeNodes.size(); i++) {
 			b.addNode(activeNodes.get(i));
@@ -636,11 +640,26 @@ public class BalancerTest {
 	@Test
 	public void testPinReturnsFalseForOversizedVariableKeys() {
 
-		Balancer b = new Balancer("NODE1", 64, 6, (short) 3);
-		CharSequence charSequenceKey = new StringBuilder("PIN1");
-		byte[] byteArrayKey = new byte[] { 1, 2, 3, 4 };
-		char[] charArrayKey = new char[] { 'P', 'I', 'N', '1' };
-		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 1, 2, 3, 4 });
+		Balancer b = new Balancer("NODE1");
+		StringBuilder maximumLengthKey = new StringBuilder(Balancer.MAX_CACHED_VARIABLE_KEY_LENGTH);
+		for (int i = 0; i < Balancer.MAX_CACHED_VARIABLE_KEY_LENGTH; i++) {
+			maximumLengthKey.append('P');
+		}
+		Assert.assertTrue(b.pin(maximumLengthKey, "NODE2"));
+		Assert.assertEquals("NODE2", b.unpin(maximumLengthKey).toString());
+
+		int oversizedLength = Balancer.MAX_CACHED_VARIABLE_KEY_LENGTH + 1;
+		StringBuilder charSequenceKey = new StringBuilder(oversizedLength);
+		byte[] byteArrayKey = new byte[oversizedLength];
+		char[] charArrayKey = new char[oversizedLength];
+
+		for (int i = 0; i < oversizedLength; i++) {
+			charSequenceKey.append('P');
+			byteArrayKey[i] = (byte) i;
+			charArrayKey[i] = (char) i;
+		}
+
+		ByteBuffer byteBufferKey = ByteBuffer.wrap(byteArrayKey);
 
 		Assert.assertFalse(b.pin(charSequenceKey, "NODE2"));
 		Assert.assertFalse(b.pin(byteArrayKey, "NODE2"));
@@ -675,6 +694,12 @@ public class BalancerTest {
 		Method method = pool.getClass().getDeclaredMethod("getLinkedListSize");
 		method.setAccessible(true);
 		return ((Integer) method.invoke(pool)).intValue();
+	}
+
+	private static int getMapSize(Balancer b, String fieldName) throws Exception {
+		Object map = getField(b, fieldName);
+		Method method = map.getClass().getMethod("size");
+		return ((Integer) method.invoke(map)).intValue();
 	}
 
 	private static long keyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
