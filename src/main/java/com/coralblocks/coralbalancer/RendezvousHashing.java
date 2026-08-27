@@ -16,10 +16,9 @@
 package com.coralblocks.coralbalancer;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 /**
- * Static Rendezvous hashing implementation used to choose one owner from a list of active nodes.
+ * Static Rendezvous hashing implementation used to choose one owner from the active nodes.
  */
 final class RendezvousHashing {
 
@@ -30,17 +29,6 @@ final class RendezvousHashing {
     	
     }
     
-    private static void validateActiveNodes(List<CharSequence> activeNodes) {
-
-        if (activeNodes == null) {
-            throw new IllegalArgumentException("They activeNodes argument cannot be null!");
-        }
-
-        if (activeNodes.isEmpty()) {
-            throw new IllegalArgumentException("The activeNodes argument cannot be empty!");
-        }
-    }
-
     private static void validateKey(Object key) {
 
         if (key == null) {
@@ -48,218 +36,19 @@ final class RendezvousHashing {
         }
     }
 
-    /**
-     * Returns the owner node for a {@link CharSequence} key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(CharSequence key, List<CharSequence> activeNodes) {
+    static CharSequence ownerForHash(long keyHash, CharSequence[] activeNodes, long[] activeNodeHashes,
+            int activeNodeCount) {
 
-        return ownerForHash(hashKey(key), activeNodes);
-    }
+        if (activeNodeCount == 0) {
+            throw new IllegalArgumentException("The activeNodes argument cannot be empty!");
+        }
 
-    /**
-     * Returns the owner node for a byte array key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(byte[] key, List<CharSequence> activeNodes) {
+        CharSequence bestNode = activeNodes[0];
+        long bestScore = score(keyHash, activeNodeHashes[0]);
 
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a char array key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(char[] key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a {@link ByteBuffer} key.
-     *
-     * @param key the key to balance, using bytes from position to limit
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(ByteBuffer key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a boolean key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(boolean key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a byte key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(byte key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a char key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(char key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a short key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(short key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for an int key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(int key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a long key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(long key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a float key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(float key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    /**
-     * Returns the owner node for a double key.
-     *
-     * @param key the key to balance
-     * @param activeNodes the active nodes to choose from
-     * @return the node account that owns the key
-     */
-    public static CharSequence ownerFor(double key, List<CharSequence> activeNodes) {
-
-        return ownerForHash(hashKey(key), activeNodes);
-    }
-
-    private static CharSequence ownerForHash(long keyHash, List<CharSequence> activeNodes) {
-
-        validateActiveNodes(activeNodes);
-
-        return hrwHashing(keyHash, activeNodes);
-    }
-
-    private static long hashKey(CharSequence key) {
-        validateKey(key);
-        return hash64(key);
-    }
-
-    private static long hashKey(byte[] key) {
-        validateKey(key);
-        return hash64(key);
-    }
-
-    private static long hashKey(char[] key) {
-        validateKey(key);
-        return hash64(key);
-    }
-
-    private static long hashKey(ByteBuffer key) {
-        validateKey(key);
-        return hash64(key);
-    }
-
-    private static long hashKey(boolean key) {
-        return hash64(key);
-    }
-
-    private static long hashKey(byte key) {
-        return hash64(key);
-    }
-
-    private static long hashKey(char key) {
-        return hash64(key);
-    }
-
-    private static long hashKey(short key) {
-        return hash64(key);
-    }
-
-    private static long hashKey(int key) {
-        return hash64(key);
-    }
-
-    private static long hashKey(long key) {
-        return hash64(key);
-    }
-
-    private static long hashKey(float key) {
-        return hash64(key);
-    }
-
-    private static long hashKey(double key) {
-        return hash64(key);
-    }
-
-    private static CharSequence hrwHashing(long keyHash, List<CharSequence> activeNodes) {
-    	
-        CharSequence bestNode = activeNodes.get(0);
-        long bestScore = score(keyHash, bestNode);
-
-        for (int i = 1; i < activeNodes.size(); i++) {
-
-            CharSequence nodeAccount = activeNodes.get(i);
-            long score = score(keyHash, nodeAccount);
+        for (int i = 1; i < activeNodeCount; i++) {
+            CharSequence nodeAccount = activeNodes[i];
+            long score = score(keyHash, activeNodeHashes[i]);
 
             if (score > bestScore || (score == bestScore && compare(nodeAccount, bestNode) < 0)) {
                 bestScore = score;
@@ -270,8 +59,63 @@ final class RendezvousHashing {
         return bestNode;
     }
 
-    private static long score(long keyHash, CharSequence nodeAccount) {
-        long nodeHash = hash64(nodeAccount);
+    static long hashNode(CharSequence nodeAccount) {
+        return hash64(nodeAccount);
+    }
+
+    static long hashKey(CharSequence key) {
+        validateKey(key);
+        return hash64(key);
+    }
+
+    static long hashKey(byte[] key) {
+        validateKey(key);
+        return hash64(key);
+    }
+
+    static long hashKey(char[] key) {
+        validateKey(key);
+        return hash64(key);
+    }
+
+    static long hashKey(ByteBuffer key) {
+        validateKey(key);
+        return hash64(key);
+    }
+
+    static long hashKey(boolean key) {
+        return hash64(key);
+    }
+
+    static long hashKey(byte key) {
+        return hash64(key);
+    }
+
+    static long hashKey(char key) {
+        return hash64(key);
+    }
+
+    static long hashKey(short key) {
+        return hash64(key);
+    }
+
+    static long hashKey(int key) {
+        return hash64(key);
+    }
+
+    static long hashKey(long key) {
+        return hash64(key);
+    }
+
+    static long hashKey(float key) {
+        return hash64(key);
+    }
+
+    static long hashKey(double key) {
+        return hash64(key);
+    }
+
+    private static long score(long keyHash, long nodeHash) {
         return mix64(keyHash ^ nodeHash);
     }
 

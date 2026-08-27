@@ -16,9 +16,7 @@
 package com.coralblocks.coralbalancer;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import com.coralblocks.coralds.map.ByteBufferMap;
 import com.coralblocks.coralds.map.ByteMap;
@@ -47,9 +45,11 @@ public class Balancer {
 	private static final int DEFAULT_CACHE_INITIAL_CAPACITY = 1024 * 8;
 	private static final short MAX_CACHED_VARIABLE_KEY_LENGTH = 128;
 
-	private final List<CharSequence> nodes;
+	private final CharSequence[] nodes;
+	private final long[] nodeHashes;
 	private final ObjectPool<StringBuilder> sbPool;
 	private final String myNodeAccount;
+	private int nodeCount;
 	
 	private final int initialCacheCapacity;
 	private final short maxCachedVariableKeyLength;
@@ -132,7 +132,8 @@ public class Balancer {
 	 * @param initialCacheCapacity the initial capacity for owner caches and pin maps
 	 */
 	public Balancer(CharSequence myNodeAccount, int maxNumberOfNodes, int maxNodeAccountLength, short maxCachedVariableKeyLength, int initialCacheCapacity) {
-		this.nodes = new ArrayList<CharSequence>(maxNumberOfNodes);
+		this.nodes = new CharSequence[maxNumberOfNodes];
+		this.nodeHashes = new long[maxNumberOfNodes];
 		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {
 			@Override
 			public StringBuilder newInstance() {
@@ -168,7 +169,7 @@ public class Balancer {
 	 * @return the number of active nodes
 	 */
 	public int getNumberOfNodes() {
-		return nodes.size();
+		return nodeCount;
 	}
 
 	/**
@@ -178,10 +179,17 @@ public class Balancer {
 	 *
 	 * @param nodeAccount the node account to add
 	 * @return {@code true} if the node was added; {@code false} if it was already present
+	 * @throws IllegalStateException if the maximum number of active nodes has been reached
 	 */
 	public boolean addNode(CharSequence nodeAccount) {
 		if (!contains(nodeAccount)) {
-			nodes.add(getFromPool(nodeAccount));
+			if (nodeCount == nodes.length) {
+				throw new IllegalStateException("Maximum number of active nodes reached: " + nodes.length);
+			}
+			CharSequence storedNodeAccount = getFromPool(nodeAccount);
+			nodes[nodeCount] = storedNodeAccount;
+			nodeHashes[nodeCount] = RendezvousHashing.hashNode(storedNodeAccount);
+			nodeCount++;
 			clearCaches();
 			return true;
 		}
@@ -199,7 +207,16 @@ public class Balancer {
 	public boolean removeNode(CharSequence nodeAccount) {
 		int index = indexOf(nodeAccount);
 		if (index >= 0) {
-			sbPool.release((StringBuilder) nodes.remove(index));
+			CharSequence removedNodeAccount = nodes[index];
+			int moved = nodeCount - index - 1;
+			if (moved > 0) {
+				System.arraycopy(nodes, index + 1, nodes, index, moved);
+				System.arraycopy(nodeHashes, index + 1, nodeHashes, index, moved);
+			}
+			nodeCount--;
+			nodes[nodeCount] = null;
+			nodeHashes[nodeCount] = 0L;
+			sbPool.release((StringBuilder) removedNodeAccount);
 			clearCaches();
 			return true;
 		}
@@ -569,12 +586,15 @@ public class Balancer {
 	/**
 	 * Returns the owner node for a {@link CharSequence} key.
 	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
+	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(CharSequence key) {
 		ensureKeyNotNull(key);
-		if (key.length() > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
+		if (key.length() > maxCachedVariableKeyLength) return ownerForHash(RendezvousHashing.hashKey(key));
 
 		CharSequence owner = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.get(key);
 		if (owner != null) return owner;
@@ -583,7 +603,7 @@ public class Balancer {
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(key, owner);
 		return owner;
 	}
@@ -591,12 +611,15 @@ public class Balancer {
 	/**
 	 * Returns the owner node for a byte array key.
 	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
+	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(byte[] key) {
 		ensureKeyNotNull(key);
-		if (key.length > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
+		if (key.length > maxCachedVariableKeyLength) return ownerForHash(RendezvousHashing.hashKey(key));
 
 		CharSequence owner = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.get(key);
 		if (owner != null) return owner;
@@ -605,7 +628,7 @@ public class Balancer {
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(key, owner);
 		return owner;
 	}
@@ -613,12 +636,15 @@ public class Balancer {
 	/**
 	 * Returns the owner node for a char array key.
 	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
+	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(char[] key) {
 		ensureKeyNotNull(key);
-		if (key.length > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
+		if (key.length > maxCachedVariableKeyLength) return ownerForHash(RendezvousHashing.hashKey(key));
 
 		charArrayView.wrap(key);
 
@@ -629,7 +655,7 @@ public class Balancer {
 		owner = cache.get(charArrayView);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(charArrayView, owner);
 		return owner;
 	}
@@ -637,12 +663,15 @@ public class Balancer {
 	/**
 	 * Returns the owner node for a {@link ByteBuffer} key.
 	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
+	 *
 	 * @param key the key to balance, using bytes from position to limit
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(ByteBuffer key) {
 		ensureKeyNotNull(key);
-		if (key.remaining() > maxCachedVariableKeyLength) return RendezvousHashing.ownerFor(key, nodes);
+		if (key.remaining() > maxCachedVariableKeyLength) return ownerForHash(RendezvousHashing.hashKey(key));
 
 		CharSequence owner = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.get(key);
 		if (owner != null) return owner;
@@ -651,13 +680,16 @@ public class Balancer {
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(key, owner);
 		return owner;
 	}
 
 	/**
 	 * Returns the owner node for a boolean key.
+	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
 	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
@@ -671,13 +703,16 @@ public class Balancer {
 		owner = cache.get(cacheKey);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(cacheKey, owner);
 		return owner;
 	}
 
 	/**
 	 * Returns the owner node for a byte key.
+	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
 	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
@@ -690,13 +725,16 @@ public class Balancer {
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(key, owner);
 		return owner;
 	}
 
 	/**
 	 * Returns the owner node for a char key.
+	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
 	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
@@ -709,13 +747,16 @@ public class Balancer {
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(key, owner);
 		return owner;
 	}
 
 	/**
 	 * Returns the owner node for a short key.
+	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
 	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
@@ -728,13 +769,16 @@ public class Balancer {
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(key, owner);
 		return owner;
 	}
 
 	/**
 	 * Returns the owner node for an int key.
+	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
 	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
@@ -747,13 +791,16 @@ public class Balancer {
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(key, owner);
 		return owner;
 	}
 
 	/**
 	 * Returns the owner node for a long key.
+	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
 	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
@@ -766,13 +813,16 @@ public class Balancer {
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(key, owner);
 		return owner;
 	}
 
 	/**
 	 * Returns the owner node for a float key.
+	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
 	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
@@ -786,13 +836,16 @@ public class Balancer {
 		owner = cache.get(cacheKey);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(cacheKey, owner);
 		return owner;
 	}
 
 	/**
 	 * Returns the owner node for a double key.
+	 *
+	 * <p>The returned {@code CharSequence} is owned by this balancer and must not be modified or retained
+	 * across changes to active nodes or pins.</p>
 	 *
 	 * @param key the key to balance
 	 * @return the node account that owns the key
@@ -806,7 +859,7 @@ public class Balancer {
 		owner = cache.get(cacheKey);
 		if (owner != null) return owner;
 
-		owner = RendezvousHashing.ownerFor(key, nodes);
+		owner = ownerForHash(RendezvousHashing.hashKey(key));
 		cache.put(cacheKey, owner);
 		return owner;
 	}
@@ -942,8 +995,8 @@ public class Balancer {
 	}
 
 	private int indexOf(CharSequence nodeAccount) {
-		for(int i = nodes.size() - 1; i >= 0; i--) {
-			CharSequence cs = nodes.get(i);
+		for(int i = nodeCount - 1; i >= 0; i--) {
+			CharSequence cs = nodes[i];
 			if (contentEquals(cs, nodeAccount)) return i;
 		}
 		return -1;
@@ -955,6 +1008,10 @@ public class Balancer {
 
 	private boolean isOwnerForMe(CharSequence owner) {
 		return contentEquals(owner, myNodeAccount);
+	}
+
+	private CharSequence ownerForHash(long keyHash) {
+		return RendezvousHashing.ownerForHash(keyHash, nodes, nodeHashes, nodeCount);
 	}
 
 	private CharSequence copyAndReleaseUnpinnedNodeAccount(CharSequence oldNodeAccount) {

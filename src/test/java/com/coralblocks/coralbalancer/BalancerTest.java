@@ -93,6 +93,23 @@ public class BalancerTest {
 	}
 
 	@Test
+	public void testMaximumNumberOfNodesIsEnforced() {
+
+		Balancer b = new Balancer("NODE1", 2);
+
+		Assert.assertTrue(b.addNode("NODE1"));
+		Assert.assertTrue(b.addNode("NODE2"));
+
+		try {
+			b.addNode("NODE3");
+			Assert.fail("Expected addNode to reject a third active node");
+		} catch (IllegalStateException expected) {
+			Assert.assertEquals(2, b.getNumberOfNodes());
+			Assert.assertFalse(b.hasNode("NODE3"));
+		}
+	}
+
+	@Test
 	public void testIsForMe() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
@@ -103,40 +120,40 @@ public class BalancerTest {
 		}
 
 		CharSequence charSequenceKey = new StringBuilder("KEY1");
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(charSequenceKey, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(charSequenceKey, activeNodes), b),
 				b.isForMe(charSequenceKey));
 
 		byte[] byteArrayKey = new byte[] { 1, 2, 3, 4 };
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(byteArrayKey, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(byteArrayKey, activeNodes), b),
 				b.isForMe(byteArrayKey));
 
 		char[] charArrayKey = new char[] { 'K', 'E', 'Y', '1' };
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(charArrayKey, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(charArrayKey, activeNodes), b),
 				b.isForMe(charArrayKey));
 
 		ByteBuffer byteBufferKey = ByteBuffer.wrap(new byte[] { 9, 1, 2, 3, 4, 9 });
 		byteBufferKey.position(1);
 		byteBufferKey.limit(5);
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(byteBufferKey, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(byteBufferKey, activeNodes), b),
 				b.isForMe(byteBufferKey));
 		Assert.assertEquals(1, byteBufferKey.position());
 		Assert.assertEquals(5, byteBufferKey.limit());
 
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(true, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(true, activeNodes), b),
 				b.isForMe(true));
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor((byte) 7, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor((byte) 7, activeNodes), b),
 				b.isForMe((byte) 7));
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor('A', activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor('A', activeNodes), b),
 				b.isForMe('A'));
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor((short) 123, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor((short) 123, activeNodes), b),
 				b.isForMe((short) 123));
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(456, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(456, activeNodes), b),
 				b.isForMe(456));
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(123456789L, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(123456789L, activeNodes), b),
 				b.isForMe(123456789L));
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(123.25f, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(123.25f, activeNodes), b),
 				b.isForMe(123.25f));
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(456.75d, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(456.75d, activeNodes), b),
 				b.isForMe(456.75d));
 
 		long keyForMe = keyFor(b.getMyNodeAccount(), activeNodes);
@@ -168,6 +185,25 @@ public class BalancerTest {
 	}
 
 	@Test
+	public void testOwnerForKeepsNodeHashesAlignedAfterRemoval() {
+
+		List<CharSequence> initialNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
+		List<CharSequence> remainingNodes = Arrays.asList("NODE1", "NODE3", "NODE4");
+		Balancer b = new Balancer("NODE1", 64, 6);
+
+		for (int i = 0; i < initialNodes.size(); i++) {
+			b.addNode(initialNodes.get(i));
+		}
+
+		Assert.assertTrue(b.removeNode("NODE2"));
+
+		for (long key = 0; key < 100; key++) {
+			Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(key, remainingNodes).toString(),
+					b.ownerFor(key).toString());
+		}
+	}
+
+	@Test
 	public void testOwnerForDistinguishesCacheHashCollisions() {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2", "NODE3", "NODE4");
@@ -180,10 +216,10 @@ public class BalancerTest {
 		}
 
 		Assert.assertEquals(key1.hashCode(), key2.hashCode());
-		Assert.assertNotEquals(RendezvousHashing.ownerFor(key1, activeNodes).toString(),
-				RendezvousHashing.ownerFor(key2, activeNodes).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(key1, activeNodes).toString(), b.ownerFor(key1).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(key2, activeNodes).toString(), b.ownerFor(key2).toString());
+		Assert.assertNotEquals(RendezvousHashingTestSupport.ownerFor(key1, activeNodes).toString(),
+				RendezvousHashingTestSupport.ownerFor(key2, activeNodes).toString());
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(key1, activeNodes).toString(), b.ownerFor(key1).toString());
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(key2, activeNodes).toString(), b.ownerFor(key2).toString());
 	}
 
 	@Test
@@ -207,17 +243,17 @@ public class BalancerTest {
 
 		ByteBuffer byteBufferKey = ByteBuffer.wrap(byteArrayKey);
 
-		Assert.assertEquals(RendezvousHashing.ownerFor(charSequenceKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(charSequenceKey, activeNodes).toString(),
 				b.ownerFor(charSequenceKey).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(charSequenceKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(charSequenceKey, activeNodes).toString(),
 				b.ownerFor(charSequenceKey).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(byteArrayKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(byteArrayKey, activeNodes).toString(),
 				b.ownerFor(byteArrayKey).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(charArrayKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(charArrayKey, activeNodes).toString(),
 				b.ownerFor(charArrayKey).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(byteBufferKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(byteBufferKey, activeNodes).toString(),
 				b.ownerFor(byteBufferKey).toString());
-		Assert.assertEquals(isOwnerForMe(RendezvousHashing.ownerFor(charSequenceKey, activeNodes), b),
+		Assert.assertEquals(isOwnerForMe(RendezvousHashingTestSupport.ownerFor(charSequenceKey, activeNodes), b),
 				b.isForMe(charSequenceKey));
 	}
 
@@ -238,13 +274,13 @@ public class BalancerTest {
 		byteBufferKey.position(1);
 		byteBufferKey.limit(5);
 
-		Assert.assertEquals(RendezvousHashing.ownerFor(charSequenceKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(charSequenceKey, activeNodes).toString(),
 				b.ownerFor(charSequenceKey).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(byteArrayKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(byteArrayKey, activeNodes).toString(),
 				b.ownerFor(byteArrayKey).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(charArrayKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(charArrayKey, activeNodes).toString(),
 				b.ownerFor(charArrayKey).toString());
-		Assert.assertEquals(RendezvousHashing.ownerFor(byteBufferKey, activeNodes).toString(),
+		Assert.assertEquals(RendezvousHashingTestSupport.ownerFor(byteBufferKey, activeNodes).toString(),
 				b.ownerFor(byteBufferKey).toString());
 		Assert.assertEquals(1, byteBufferKey.position());
 		Assert.assertEquals(5, byteBufferKey.limit());
@@ -311,7 +347,7 @@ public class BalancerTest {
 			b.addNode(activeNodes.get(i));
 		}
 
-		CharSequence rendezvousOwner = RendezvousHashing.ownerFor(key, activeNodes);
+		CharSequence rendezvousOwner = RendezvousHashingTestSupport.ownerFor(key, activeNodes);
 		String pinnedOwner = differentNode(rendezvousOwner, activeNodes);
 
 		Assert.assertEquals(rendezvousOwner.toString(), b.ownerFor(key).toString());
@@ -480,7 +516,7 @@ public class BalancerTest {
 
 		Assert.assertTrue(b.addNode("NODE3"));
 		Assert.assertEquals("NODE3",
-				RendezvousHashing.ownerFor("KEEP", Arrays.<CharSequence>asList("NODE2", "NODE3")).toString());
+				RendezvousHashingTestSupport.ownerFor("KEEP", Arrays.<CharSequence>asList("NODE2", "NODE3")).toString());
 		Assert.assertEquals("NODE2", b.ownerFor("KEEP").toString());
 	}
 
@@ -597,7 +633,7 @@ public class BalancerTest {
 
 	private static long keyFor(CharSequence nodeAccount, List<CharSequence> activeNodes) {
 		for (long key = 0; key < 10_000; key++) {
-			CharSequence owner = RendezvousHashing.ownerFor(key, activeNodes);
+			CharSequence owner = RendezvousHashingTestSupport.ownerFor(key, activeNodes);
 			if (nodeAccount.toString().contentEquals(owner)) return key;
 		}
 		throw new IllegalStateException("Could not find key for node account: " + nodeAccount);
