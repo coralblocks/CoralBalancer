@@ -190,7 +190,7 @@ public class BalancerTest {
 	}
 
 	@Test
-	public void testOwnerForClearsCacheWhenNodesChange() {
+	public void testOwnerForClearsAllCachesWhenNodesChange() throws Exception {
 
 		List<CharSequence> activeNodes = Arrays.asList("NODE1", "NODE2");
 		Balancer b = new Balancer("NODE1");
@@ -203,8 +203,17 @@ public class BalancerTest {
 
 		Assert.assertEquals("NODE1", b.ownerFor(keyForNode1).toString());
 		Assert.assertEquals("NODE1", b.ownerFor(keyForNode1).toString());
+		b.ownerFor("TEXT_KEY");
+		b.ownerFor(new byte[] { 1, 2, 3 });
+
+		Assert.assertEquals(1, getMapSize(b, "charSequenceOwnerCache"));
+		Assert.assertEquals(1, getMapSize(b, "byteSequenceOwnerCache"));
+		Assert.assertEquals(1, getMapSize(b, "primitiveOwnerCache"));
 
 		Assert.assertTrue(b.removeNode("NODE1"));
+		Assert.assertEquals(0, getMapSize(b, "charSequenceOwnerCache"));
+		Assert.assertEquals(0, getMapSize(b, "byteSequenceOwnerCache"));
+		Assert.assertEquals(0, getMapSize(b, "primitiveOwnerCache"));
 
 		Assert.assertEquals("NODE2", b.ownerFor(keyForNode1).toString());
 		Assert.assertFalse(b.isForMe(keyForNode1));
