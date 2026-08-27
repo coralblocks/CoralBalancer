@@ -65,7 +65,7 @@ public class Balancer {
 	private static final boolean USE_DIRECT_BYTE_BUFFERS = false;
 	private static final float OWNER_CACHE_LOAD_FACTOR = 1.0f;
 
-	private final CharSequence[] nodes;
+	private final StringBuilder[] nodes;
 	private final long[] nodeHashes;
 	private final ObjectPool<StringBuilder> sbPool;
 	private final String myNodeAccount;
@@ -74,20 +74,20 @@ public class Balancer {
 	private final CharArrayView charArrayView;
 	private final StringBuilder unpinnedNodeAccount;
 	
-	private CharSequenceMap<CharSequence> charSequenceOwnerCache = null;
-	private ByteBufferMap<CharSequence> byteSequenceOwnerCache = null;
-	private LongMap<CharSequence> primitiveOwnerCache = null;
+	private CharSequenceMap<StringBuilder> charSequenceOwnerCache = null;
+	private ByteBufferMap<StringBuilder> byteSequenceOwnerCache = null;
+	private LongMap<StringBuilder> primitiveOwnerCache = null;
 
-	private CharSequenceMap<CharSequence> charSequenceOwnerPins = null;
-	private ByteBufferMap<CharSequence> byteSequenceOwnerPins = null;
-	private ByteMap<CharSequence> booleanOwnerPins = null;
-	private ByteMap<CharSequence> byteOwnerPins = null;
-	private IntMap<CharSequence> charOwnerPins = null;
-	private IntMap<CharSequence> shortOwnerPins = null;
-	private IntMap<CharSequence> intOwnerPins = null;
-	private LongMap<CharSequence> longOwnerPins = null;
-	private IntMap<CharSequence> floatOwnerPins = null;
-	private LongMap<CharSequence> doubleOwnerPins = null;
+	private CharSequenceMap<StringBuilder> charSequenceOwnerPins = null;
+	private ByteBufferMap<StringBuilder> byteSequenceOwnerPins = null;
+	private ByteMap<StringBuilder> booleanOwnerPins = null;
+	private ByteMap<StringBuilder> byteOwnerPins = null;
+	private IntMap<StringBuilder> charOwnerPins = null;
+	private IntMap<StringBuilder> shortOwnerPins = null;
+	private IntMap<StringBuilder> intOwnerPins = null;
+	private LongMap<StringBuilder> longOwnerPins = null;
+	private IntMap<StringBuilder> floatOwnerPins = null;
+	private LongMap<StringBuilder> doubleOwnerPins = null;
 	
 	/**
 	 * Creates a balancer for the given local node account.
@@ -99,7 +99,7 @@ public class Balancer {
 		if (myNodeAccount == null) {
 			throw new IllegalArgumentException("The myNodeAccount argument cannot be null!");
 		}
-		this.nodes = new CharSequence[MAX_NUMBER_OF_NODES];
+		this.nodes = new StringBuilder[MAX_NUMBER_OF_NODES];
 		this.nodeHashes = new long[MAX_NUMBER_OF_NODES];
 		ObjectBuilder<StringBuilder> builder = new ObjectBuilder<StringBuilder>() {
 			@Override
@@ -150,7 +150,7 @@ public class Balancer {
 			if (nodeCount == nodes.length) {
 				throw new IllegalStateException("Maximum number of active nodes reached: " + nodes.length);
 			}
-			CharSequence storedNodeAccount = getFromPool(nodeAccount);
+			StringBuilder storedNodeAccount = getFromPool(nodeAccount);
 			nodes[nodeCount] = storedNodeAccount;
 			nodeHashes[nodeCount] = RendezvousHashing.hashNode(storedNodeAccount);
 			nodeCount++;
@@ -171,7 +171,7 @@ public class Balancer {
 	public boolean removeNode(CharSequence nodeAccount) {
 		int index = indexOf(nodeAccount);
 		if (index >= 0) {
-			CharSequence removedNodeAccount = nodes[index];
+			StringBuilder removedNodeAccount = nodes[index];
 			int moved = nodeCount - index - 1;
 			if (moved > 0) {
 				System.arraycopy(nodes, index + 1, nodes, index, moved);
@@ -180,7 +180,7 @@ public class Balancer {
 			nodeCount--;
 			nodes[nodeCount] = null;
 			nodeHashes[nodeCount] = 0L;
-			sbPool.release((StringBuilder) removedNodeAccount);
+			sbPool.release(removedNodeAccount);
 			clearCaches();
 			return true;
 		}
@@ -208,8 +208,8 @@ public class Balancer {
 	public void pin(CharSequence key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
 		ensurePinnableVariableKeyLength(key.length());
-		CharSequence oldNodeAccount = getCharSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getCharSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -223,8 +223,8 @@ public class Balancer {
 	public void pin(byte[] key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
 		ensurePinnableVariableKeyLength(key.length);
-		CharSequence oldNodeAccount = getByteSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getByteSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -239,9 +239,9 @@ public class Balancer {
 		ensureKeyNotNull(key);
 		ensurePinnableVariableKeyLength(key.length);
 		charArrayView.wrap(key);
-		CharSequence oldNodeAccount = getCharSequenceOwnerPins().put(
+		StringBuilder oldNodeAccount = getCharSequenceOwnerPins().put(
 				charArrayView, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -255,8 +255,8 @@ public class Balancer {
 	public void pin(ByteBuffer key, CharSequence nodeAccount) {
 		ensureKeyNotNull(key);
 		ensurePinnableVariableKeyLength(key.remaining());
-		CharSequence oldNodeAccount = getByteSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getByteSequenceOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -268,8 +268,8 @@ public class Balancer {
 	 */
 	public void pin(boolean key, CharSequence nodeAccount) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
-		CharSequence oldNodeAccount = getBooleanOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getBooleanOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -280,8 +280,8 @@ public class Balancer {
 	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
 	public void pin(byte key, CharSequence nodeAccount) {
-		CharSequence oldNodeAccount = getByteOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getByteOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -292,8 +292,8 @@ public class Balancer {
 	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
 	public void pin(char key, CharSequence nodeAccount) {
-		CharSequence oldNodeAccount = getCharOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getCharOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -304,8 +304,8 @@ public class Balancer {
 	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
 	public void pin(short key, CharSequence nodeAccount) {
-		CharSequence oldNodeAccount = getShortOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getShortOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -316,8 +316,8 @@ public class Balancer {
 	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
 	public void pin(int key, CharSequence nodeAccount) {
-		CharSequence oldNodeAccount = getIntOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getIntOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -328,8 +328,8 @@ public class Balancer {
 	 * @throws IllegalArgumentException if {@code nodeAccount} is {@code null}
 	 */
 	public void pin(long key, CharSequence nodeAccount) {
-		CharSequence oldNodeAccount = getLongOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getLongOwnerPins().put(key, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -341,8 +341,8 @@ public class Balancer {
 	 */
 	public void pin(float key, CharSequence nodeAccount) {
 		int cacheKey = Float.floatToIntBits(key);
-		CharSequence oldNodeAccount = getFloatOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getFloatOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -354,8 +354,8 @@ public class Balancer {
 	 */
 	public void pin(double key, CharSequence nodeAccount) {
 		long cacheKey = Double.doubleToLongBits(key);
-		CharSequence oldNodeAccount = getDoubleOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
-		if (oldNodeAccount != null) sbPool.release((StringBuilder) oldNodeAccount);
+		StringBuilder oldNodeAccount = getDoubleOwnerPins().put(cacheKey, getNodeAccountFromPool(nodeAccount));
+		if (oldNodeAccount != null) sbPool.release(oldNodeAccount);
 	}
 
 	/**
@@ -368,7 +368,7 @@ public class Balancer {
 	public CharSequence unpin(CharSequence key) {
 		ensureKeyNotNull(key);
 		if (key.length() > MAX_CACHED_VARIABLE_KEY_LENGTH) return copyAndReleaseUnpinnedNodeAccount(null);
-		CharSequence oldNodeAccount = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.remove(key);
+		StringBuilder oldNodeAccount = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.remove(key);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -382,7 +382,7 @@ public class Balancer {
 	public CharSequence unpin(byte[] key) {
 		ensureKeyNotNull(key);
 		if (key.length > MAX_CACHED_VARIABLE_KEY_LENGTH) return copyAndReleaseUnpinnedNodeAccount(null);
-		CharSequence oldNodeAccount = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key);
+		StringBuilder oldNodeAccount = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -398,7 +398,7 @@ public class Balancer {
 		if (key.length > MAX_CACHED_VARIABLE_KEY_LENGTH) return copyAndReleaseUnpinnedNodeAccount(null);
 		if (charSequenceOwnerPins == null) return copyAndReleaseUnpinnedNodeAccount(null);
 		charArrayView.wrap(key);
-		CharSequence oldNodeAccount = charSequenceOwnerPins.remove(charArrayView);
+		StringBuilder oldNodeAccount = charSequenceOwnerPins.remove(charArrayView);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -412,7 +412,7 @@ public class Balancer {
 	public CharSequence unpin(ByteBuffer key) {
 		ensureKeyNotNull(key);
 		if (key.remaining() > MAX_CACHED_VARIABLE_KEY_LENGTH) return copyAndReleaseUnpinnedNodeAccount(null);
-		CharSequence oldNodeAccount = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key);
+		StringBuilder oldNodeAccount = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.remove(key);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -425,7 +425,7 @@ public class Balancer {
 	 */
 	public CharSequence unpin(boolean key) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
-		CharSequence oldNodeAccount = booleanOwnerPins == null ? null : booleanOwnerPins.remove(cacheKey);
+		StringBuilder oldNodeAccount = booleanOwnerPins == null ? null : booleanOwnerPins.remove(cacheKey);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -437,7 +437,7 @@ public class Balancer {
 	 *         {@code null} if the key was not pinned
 	 */
 	public CharSequence unpin(byte key) {
-		CharSequence oldNodeAccount = byteOwnerPins == null ? null : byteOwnerPins.remove(key);
+		StringBuilder oldNodeAccount = byteOwnerPins == null ? null : byteOwnerPins.remove(key);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -449,7 +449,7 @@ public class Balancer {
 	 *         {@code null} if the key was not pinned
 	 */
 	public CharSequence unpin(char key) {
-		CharSequence oldNodeAccount = charOwnerPins == null ? null : charOwnerPins.remove(key);
+		StringBuilder oldNodeAccount = charOwnerPins == null ? null : charOwnerPins.remove(key);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -461,7 +461,7 @@ public class Balancer {
 	 *         {@code null} if the key was not pinned
 	 */
 	public CharSequence unpin(short key) {
-		CharSequence oldNodeAccount = shortOwnerPins == null ? null : shortOwnerPins.remove(key);
+		StringBuilder oldNodeAccount = shortOwnerPins == null ? null : shortOwnerPins.remove(key);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -473,7 +473,7 @@ public class Balancer {
 	 *         {@code null} if the key was not pinned
 	 */
 	public CharSequence unpin(int key) {
-		CharSequence oldNodeAccount = intOwnerPins == null ? null : intOwnerPins.remove(key);
+		StringBuilder oldNodeAccount = intOwnerPins == null ? null : intOwnerPins.remove(key);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -485,7 +485,7 @@ public class Balancer {
 	 *         {@code null} if the key was not pinned
 	 */
 	public CharSequence unpin(long key) {
-		CharSequence oldNodeAccount = longOwnerPins == null ? null : longOwnerPins.remove(key);
+		StringBuilder oldNodeAccount = longOwnerPins == null ? null : longOwnerPins.remove(key);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -498,7 +498,7 @@ public class Balancer {
 	 */
 	public CharSequence unpin(float key) {
 		int cacheKey = Float.floatToIntBits(key);
-		CharSequence oldNodeAccount = floatOwnerPins == null ? null : floatOwnerPins.remove(cacheKey);
+		StringBuilder oldNodeAccount = floatOwnerPins == null ? null : floatOwnerPins.remove(cacheKey);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -511,7 +511,7 @@ public class Balancer {
 	 */
 	public CharSequence unpin(double key) {
 		long cacheKey = Double.doubleToLongBits(key);
-		CharSequence oldNodeAccount = doubleOwnerPins == null ? null : doubleOwnerPins.remove(cacheKey);
+		StringBuilder oldNodeAccount = doubleOwnerPins == null ? null : doubleOwnerPins.remove(cacheKey);
 		return copyAndReleaseUnpinnedNodeAccount(oldNodeAccount);
 	}
 
@@ -552,10 +552,10 @@ public class Balancer {
 		ensureKeyNotNull(key);
 		if (key.length() > MAX_CACHED_VARIABLE_KEY_LENGTH) return ownerForHash(RendezvousHashing.hashKey(key));
 
-		CharSequence owner = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.get(key);
+		StringBuilder owner = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.get(key);
 		if (owner != null) return owner;
 
-		CharSequenceMap<CharSequence> cache = getCharSequenceOwnerCache();
+		CharSequenceMap<StringBuilder> cache = getCharSequenceOwnerCache();
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
@@ -577,10 +577,10 @@ public class Balancer {
 		ensureKeyNotNull(key);
 		if (key.length > MAX_CACHED_VARIABLE_KEY_LENGTH) return ownerForHash(RendezvousHashing.hashKey(key));
 
-		CharSequence owner = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.get(key);
+		StringBuilder owner = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.get(key);
 		if (owner != null) return owner;
 
-		ByteBufferMap<CharSequence> cache = getByteSequenceOwnerCache();
+		ByteBufferMap<StringBuilder> cache = getByteSequenceOwnerCache();
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
@@ -604,10 +604,10 @@ public class Balancer {
 
 		charArrayView.wrap(key);
 
-		CharSequence owner = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.get(charArrayView);
+		StringBuilder owner = charSequenceOwnerPins == null ? null : charSequenceOwnerPins.get(charArrayView);
 		if (owner != null) return owner;
 
-		CharSequenceMap<CharSequence> cache = getCharSequenceOwnerCache();
+		CharSequenceMap<StringBuilder> cache = getCharSequenceOwnerCache();
 		owner = cache.get(charArrayView);
 		if (owner != null) return owner;
 
@@ -629,10 +629,10 @@ public class Balancer {
 		ensureKeyNotNull(key);
 		if (key.remaining() > MAX_CACHED_VARIABLE_KEY_LENGTH) return ownerForHash(RendezvousHashing.hashKey(key));
 
-		CharSequence owner = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.get(key);
+		StringBuilder owner = byteSequenceOwnerPins == null ? null : byteSequenceOwnerPins.get(key);
 		if (owner != null) return owner;
 
-		ByteBufferMap<CharSequence> cache = getByteSequenceOwnerCache();
+		ByteBufferMap<StringBuilder> cache = getByteSequenceOwnerCache();
 		owner = cache.get(key);
 		if (owner != null) return owner;
 
@@ -652,7 +652,7 @@ public class Balancer {
 	 */
 	public CharSequence ownerFor(boolean key) {
 		byte cacheKey = key ? (byte) 1 : (byte) 0;
-		CharSequence owner = booleanOwnerPins == null ? null : booleanOwnerPins.get(cacheKey);
+		StringBuilder owner = booleanOwnerPins == null ? null : booleanOwnerPins.get(cacheKey);
 		if (owner != null) return owner;
 		return ownerForPrimitive(cacheKey);
 	}
@@ -667,7 +667,7 @@ public class Balancer {
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(byte key) {
-		CharSequence owner = byteOwnerPins == null ? null : byteOwnerPins.get(key);
+		StringBuilder owner = byteOwnerPins == null ? null : byteOwnerPins.get(key);
 		if (owner != null) return owner;
 		return ownerForPrimitive(key);
 	}
@@ -682,7 +682,7 @@ public class Balancer {
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(char key) {
-		CharSequence owner = charOwnerPins == null ? null : charOwnerPins.get(key);
+		StringBuilder owner = charOwnerPins == null ? null : charOwnerPins.get(key);
 		if (owner != null) return owner;
 		return ownerForPrimitive(key);
 	}
@@ -697,7 +697,7 @@ public class Balancer {
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(short key) {
-		CharSequence owner = shortOwnerPins == null ? null : shortOwnerPins.get(key);
+		StringBuilder owner = shortOwnerPins == null ? null : shortOwnerPins.get(key);
 		if (owner != null) return owner;
 		return ownerForPrimitive(key);
 	}
@@ -712,7 +712,7 @@ public class Balancer {
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(int key) {
-		CharSequence owner = intOwnerPins == null ? null : intOwnerPins.get(key);
+		StringBuilder owner = intOwnerPins == null ? null : intOwnerPins.get(key);
 		if (owner != null) return owner;
 		return ownerForPrimitive(key);
 	}
@@ -727,7 +727,7 @@ public class Balancer {
 	 * @return the node account that owns the key
 	 */
 	public CharSequence ownerFor(long key) {
-		CharSequence owner = longOwnerPins == null ? null : longOwnerPins.get(key);
+		StringBuilder owner = longOwnerPins == null ? null : longOwnerPins.get(key);
 		if (owner != null) return owner;
 		return ownerForPrimitive(key);
 	}
@@ -743,7 +743,7 @@ public class Balancer {
 	 */
 	public CharSequence ownerFor(float key) {
 		int cacheKey = Float.floatToIntBits(key);
-		CharSequence owner = floatOwnerPins == null ? null : floatOwnerPins.get(cacheKey);
+		StringBuilder owner = floatOwnerPins == null ? null : floatOwnerPins.get(cacheKey);
 		if (owner != null) return owner;
 		return ownerForPrimitive(cacheKey);
 	}
@@ -759,7 +759,7 @@ public class Balancer {
 	 */
 	public CharSequence ownerFor(double key) {
 		long cacheKey = Double.doubleToLongBits(key);
-		CharSequence owner = doubleOwnerPins == null ? null : doubleOwnerPins.get(cacheKey);
+		StringBuilder owner = doubleOwnerPins == null ? null : doubleOwnerPins.get(cacheKey);
 		if (owner != null) return owner;
 		return ownerForPrimitive(cacheKey);
 	}
@@ -884,7 +884,7 @@ public class Balancer {
 		return isOwnerForMe(ownerFor(key));
 	}
 
-	private CharSequence getFromPool(CharSequence cs) {
+	private StringBuilder getFromPool(CharSequence cs) {
 		StringBuilder sb = sbPool.get();
 		sb.setLength(0);
 		final int len = cs.length();
@@ -896,7 +896,7 @@ public class Balancer {
 
 	private int indexOf(CharSequence nodeAccount) {
 		for(int i = nodeCount - 1; i >= 0; i--) {
-			CharSequence cs = nodes[i];
+			StringBuilder cs = nodes[i];
 			if (contentEquals(cs, nodeAccount)) return i;
 		}
 		return -1;
@@ -910,13 +910,13 @@ public class Balancer {
 		return contentEquals(owner, myNodeAccount);
 	}
 
-	private CharSequence ownerForHash(long keyHash) {
+	private StringBuilder ownerForHash(long keyHash) {
 		return RendezvousHashing.ownerForHash(keyHash, nodes, nodeHashes, nodeCount);
 	}
 
-	private CharSequence ownerForPrimitive(long key) {
-		LongMap<CharSequence> cache = getPrimitiveOwnerCache();
-		CharSequence owner = cache.get(key);
+	private StringBuilder ownerForPrimitive(long key) {
+		LongMap<StringBuilder> cache = getPrimitiveOwnerCache();
+		StringBuilder owner = cache.get(key);
 		if (owner != null) return owner;
 
 		owner = ownerForHash(RendezvousHashing.hashKey(key));
@@ -924,23 +924,23 @@ public class Balancer {
 		return owner;
 	}
 
-	private CharSequence copyAndReleaseUnpinnedNodeAccount(CharSequence oldNodeAccount) {
+	private CharSequence copyAndReleaseUnpinnedNodeAccount(StringBuilder oldNodeAccount) {
 		unpinnedNodeAccount.setLength(0);
 		if (oldNodeAccount == null) return null;
 		unpinnedNodeAccount.append(oldNodeAccount);
-		sbPool.release((StringBuilder) oldNodeAccount);
+		sbPool.release(oldNodeAccount);
 		return unpinnedNodeAccount;
 	}
 
-	private int removePinsForNode(Iterable<CharSequence> pins, CharSequence nodeAccount) {
+	private int removePinsForNode(Iterable<StringBuilder> pins, CharSequence nodeAccount) {
 		if (pins == null) return 0;
 		int removed = 0;
-		Iterator<CharSequence> iter = pins.iterator();
+		Iterator<StringBuilder> iter = pins.iterator();
 		while(iter.hasNext()) {
-			CharSequence pinnedNodeAccount = iter.next();
+			StringBuilder pinnedNodeAccount = iter.next();
 			if (contentEquals(pinnedNodeAccount, nodeAccount)) {
 				iter.remove();
-				sbPool.release((StringBuilder) pinnedNodeAccount);
+				sbPool.release(pinnedNodeAccount);
 				removed++;
 			}
 		}
@@ -953,103 +953,103 @@ public class Balancer {
 		if (primitiveOwnerCache != null) primitiveOwnerCache.clear();
 	}
 
-	private CharSequenceMap<CharSequence> getCharSequenceOwnerCache() {
+	private CharSequenceMap<StringBuilder> getCharSequenceOwnerCache() {
 		if (charSequenceOwnerCache == null) {
-			charSequenceOwnerCache = new CharSequenceMap<CharSequence>(
+			charSequenceOwnerCache = new CharSequenceMap<StringBuilder>(
 					OWNER_CACHE_CAPACITY, MAX_CACHED_VARIABLE_KEY_LENGTH, OWNER_CACHE_LOAD_FACTOR);
 		}
 		return charSequenceOwnerCache;
 	}
 
-	private ByteBufferMap<CharSequence> getByteSequenceOwnerCache() {
+	private ByteBufferMap<StringBuilder> getByteSequenceOwnerCache() {
 		if (byteSequenceOwnerCache == null) {
-			byteSequenceOwnerCache = new ByteBufferMap<CharSequence>(
+			byteSequenceOwnerCache = new ByteBufferMap<StringBuilder>(
 					OWNER_CACHE_CAPACITY, MAX_CACHED_VARIABLE_KEY_LENGTH,
 					OWNER_CACHE_LOAD_FACTOR, USE_DIRECT_BYTE_BUFFERS);
 		}
 		return byteSequenceOwnerCache;
 	}
 
-	private LongMap<CharSequence> getPrimitiveOwnerCache() {
+	private LongMap<StringBuilder> getPrimitiveOwnerCache() {
 		if (primitiveOwnerCache == null) {
-			primitiveOwnerCache = new LongMap<CharSequence>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
+			primitiveOwnerCache = new LongMap<StringBuilder>(OWNER_CACHE_CAPACITY, OWNER_CACHE_LOAD_FACTOR);
 		}
 		return primitiveOwnerCache;
 	}
 
-	private CharSequenceMap<CharSequence> getCharSequenceOwnerPins() {
+	private CharSequenceMap<StringBuilder> getCharSequenceOwnerPins() {
 		if (charSequenceOwnerPins == null) {
-			charSequenceOwnerPins = new CharSequenceMap<CharSequence>(
+			charSequenceOwnerPins = new CharSequenceMap<StringBuilder>(
 					PIN_MAP_INITIAL_CAPACITY, MAX_CACHED_VARIABLE_KEY_LENGTH);
 		}
 		return charSequenceOwnerPins;
 	}
 
-	private ByteBufferMap<CharSequence> getByteSequenceOwnerPins() {
+	private ByteBufferMap<StringBuilder> getByteSequenceOwnerPins() {
 		if (byteSequenceOwnerPins == null) {
-			byteSequenceOwnerPins = new ByteBufferMap<CharSequence>(
+			byteSequenceOwnerPins = new ByteBufferMap<StringBuilder>(
 					PIN_MAP_INITIAL_CAPACITY, MAX_CACHED_VARIABLE_KEY_LENGTH, USE_DIRECT_BYTE_BUFFERS);
 		}
 		return byteSequenceOwnerPins;
 	}
 
-	private ByteMap<CharSequence> getBooleanOwnerPins() {
+	private ByteMap<StringBuilder> getBooleanOwnerPins() {
 		if (booleanOwnerPins == null) {
-			booleanOwnerPins = new ByteMap<CharSequence>();
+			booleanOwnerPins = new ByteMap<StringBuilder>();
 		}
 		return booleanOwnerPins;
 	}
 
-	private ByteMap<CharSequence> getByteOwnerPins() {
+	private ByteMap<StringBuilder> getByteOwnerPins() {
 		if (byteOwnerPins == null) {
-			byteOwnerPins = new ByteMap<CharSequence>();
+			byteOwnerPins = new ByteMap<StringBuilder>();
 		}
 		return byteOwnerPins;
 	}
 
-	private IntMap<CharSequence> getCharOwnerPins() {
+	private IntMap<StringBuilder> getCharOwnerPins() {
 		if (charOwnerPins == null) {
-			charOwnerPins = new IntMap<CharSequence>(PIN_MAP_INITIAL_CAPACITY);
+			charOwnerPins = new IntMap<StringBuilder>(PIN_MAP_INITIAL_CAPACITY);
 		}
 		return charOwnerPins;
 	}
 
-	private IntMap<CharSequence> getShortOwnerPins() {
+	private IntMap<StringBuilder> getShortOwnerPins() {
 		if (shortOwnerPins == null) {
-			shortOwnerPins = new IntMap<CharSequence>(PIN_MAP_INITIAL_CAPACITY);
+			shortOwnerPins = new IntMap<StringBuilder>(PIN_MAP_INITIAL_CAPACITY);
 		}
 		return shortOwnerPins;
 	}
 
-	private IntMap<CharSequence> getIntOwnerPins() {
+	private IntMap<StringBuilder> getIntOwnerPins() {
 		if (intOwnerPins == null) {
-			intOwnerPins = new IntMap<CharSequence>(PIN_MAP_INITIAL_CAPACITY);
+			intOwnerPins = new IntMap<StringBuilder>(PIN_MAP_INITIAL_CAPACITY);
 		}
 		return intOwnerPins;
 	}
 
-	private LongMap<CharSequence> getLongOwnerPins() {
+	private LongMap<StringBuilder> getLongOwnerPins() {
 		if (longOwnerPins == null) {
-			longOwnerPins = new LongMap<CharSequence>(PIN_MAP_INITIAL_CAPACITY);
+			longOwnerPins = new LongMap<StringBuilder>(PIN_MAP_INITIAL_CAPACITY);
 		}
 		return longOwnerPins;
 	}
 
-	private IntMap<CharSequence> getFloatOwnerPins() {
+	private IntMap<StringBuilder> getFloatOwnerPins() {
 		if (floatOwnerPins == null) {
-			floatOwnerPins = new IntMap<CharSequence>(PIN_MAP_INITIAL_CAPACITY);
+			floatOwnerPins = new IntMap<StringBuilder>(PIN_MAP_INITIAL_CAPACITY);
 		}
 		return floatOwnerPins;
 	}
 
-	private LongMap<CharSequence> getDoubleOwnerPins() {
+	private LongMap<StringBuilder> getDoubleOwnerPins() {
 		if (doubleOwnerPins == null) {
-			doubleOwnerPins = new LongMap<CharSequence>(PIN_MAP_INITIAL_CAPACITY);
+			doubleOwnerPins = new LongMap<StringBuilder>(PIN_MAP_INITIAL_CAPACITY);
 		}
 		return doubleOwnerPins;
 	}
 
-	private CharSequence getNodeAccountFromPool(CharSequence nodeAccount) {
+	private StringBuilder getNodeAccountFromPool(CharSequence nodeAccount) {
 		ensureNodeAccountNotNull(nodeAccount);
 		return getFromPool(nodeAccount);
 	}

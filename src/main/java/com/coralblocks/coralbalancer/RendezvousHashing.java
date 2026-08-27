@@ -36,18 +36,18 @@ final class RendezvousHashing {
         }
     }
 
-    static CharSequence ownerForHash(long keyHash, CharSequence[] activeNodes, long[] activeNodeHashes,
+    static <T extends CharSequence> T ownerForHash(long keyHash, T[] activeNodes, long[] activeNodeHashes,
             int activeNodeCount) {
 
         if (activeNodeCount == 0) {
             throw new IllegalArgumentException("The activeNodes argument cannot be empty!");
         }
 
-        CharSequence bestNode = activeNodes[0];
+        T bestNode = activeNodes[0];
         long bestScore = score(keyHash, activeNodeHashes[0]);
 
         for (int i = 1; i < activeNodeCount; i++) {
-            CharSequence nodeAccount = activeNodes[i];
+            T nodeAccount = activeNodes[i];
             long score = score(keyHash, activeNodeHashes[i]);
 
             if (score > bestScore || (score == bestScore && compare(nodeAccount, bestNode) < 0)) {
